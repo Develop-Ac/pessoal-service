@@ -1,4 +1,4 @@
-# rhdp-service — RH/DP · Folha para DRE
+# pessoal-service — RH/DP · Folha para DRE
 
 Backend NestJS do módulo **Pessoal** da intranet. Importa o PDF da folha
 (Relatório de Líquidos), mantém o cadastro de colaboradores com rateio por canal
