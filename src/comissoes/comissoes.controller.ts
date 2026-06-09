@@ -12,6 +12,7 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { ComissoesService } from './comissoes.service';
 import {
   AbrirPeriodoDto,
+  AtualizarAtacadoConfigDto,
   AtualizarParametroDto,
   AtualizarRepresentanteDto,
   ListarRepresentantesQuery,
@@ -170,5 +171,11 @@ export class ComissoesController {
   @ApiOperation({ summary: 'Tabelas de alíquota do atacado (mix 2/3, mix 1 e meta)' })
   faixasAtacado() {
     return this.service.listarFaixasAtacado();
+  }
+
+  @Patch('atacado/faixas')
+  @ApiOperation({ summary: 'Edita as tabelas de alíquota do atacado (mix 2/3, mix 1 e meta)' })
+  atualizarFaixasAtacado(@Body() dto: AtualizarAtacadoConfigDto) {
+    return this.service.atualizarFaixasAtacado(dto);
   }
 }

@@ -710,6 +710,38 @@ export class ComissoesService {
     );
     return { mix23, mix1, meta_mix1: cfg.length ? Number(cfg[0].meta_mix1) : 0.3 };
   }
+
+  /** Edita em lote as tabelas de alíquota do atacado (mix23/mix1/meta). */
+  async atualizarFaixasAtacado(dto: {
+    mix23?: { id: number; valor_min?: number; valor_max?: number; percentual?: number; ativo?: boolean }[];
+    mix1?: { id: number; percentual?: number; ativo?: boolean }[];
+    meta_mix1?: number;
+  }) {
+    for (const f of dto.mix23 ?? []) {
+      const sets: Prisma.Sql[] = [];
+      if (f.valor_min !== undefined) sets.push(Prisma.sql`valor_min = ${f.valor_min}`);
+      if (f.valor_max !== undefined) sets.push(Prisma.sql`valor_max = ${f.valor_max}`);
+      if (f.percentual !== undefined) sets.push(Prisma.sql`percentual = ${f.percentual}`);
+      if (f.ativo !== undefined) sets.push(Prisma.sql`ativo = ${f.ativo}`);
+      if (sets.length)
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE dbo.ComissaoAtacadoFaixaMix23 SET ${Prisma.join(sets, ', ')} WHERE id = ${f.id}`);
+    }
+    for (const f of dto.mix1 ?? []) {
+      const sets: Prisma.Sql[] = [];
+      if (f.percentual !== undefined) sets.push(Prisma.sql`percentual = ${f.percentual}`);
+      if (f.ativo !== undefined) sets.push(Prisma.sql`ativo = ${f.ativo}`);
+      if (sets.length)
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE dbo.ComissaoAtacadoFaixaMix1 SET ${Prisma.join(sets, ', ')} WHERE id = ${f.id}`);
+    }
+    if (dto.meta_mix1 !== undefined) {
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE dbo.ComissaoAtacadoConfig
+        SET meta_mix1 = ${dto.meta_mix1}, data_atualizacao = GETDATE() WHERE id = 1`);
+    }
+    return this.listarFaixasAtacado();
+  }
 }
 
 /* ------------------------------- helpers ----------------------------------- */

@@ -28,6 +28,20 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 /* -----------------------------------------------------------------------------
+   TRAVA DE BANCO — este script depende de dbo.ComissaoPeriodo (criado no
+   01_comissoes_schema.sql). Se você não estiver conectado ao banco certo (BI),
+   ele PARA aqui (SET NOEXEC ON) em vez de criar tabelas soltas no banco errado
+   e falhar na FK. Selecione o banco BI no SSMS (ou rode "USE [BI];") e execute.
+----------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.ComissaoPeriodo', 'U') IS NULL
+BEGIN
+    PRINT '*** ERRO: dbo.ComissaoPeriodo NAO existe neste banco. ***';
+    PRINT '*** Conecte/selecione o banco BI (USE [BI];) e rode de novo. Nada foi criado. ***';
+    SET NOEXEC ON;
+END
+GO
+
+/* -----------------------------------------------------------------------------
    1) ComissaoAtacadoFaixaMix23  — alíquota progressiva do mix 2/3 (editável)
    Casa quando: total_para_faixa <= valor_max (faixas em ordem crescente; a
    última, "acima de", tem valor_max gigante). valor_min é só informativo/UI.
@@ -163,4 +177,8 @@ END
 GO
 
 PRINT 'Esquema de Comissões — ATACADO criado/atualizado com sucesso.';
+GO
+
+/* Reabilita a execução (desfaz a trava caso tenha sido acionada). */
+SET NOEXEC OFF;
 GO

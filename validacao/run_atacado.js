@@ -69,4 +69,34 @@ for (const v of res.vendedores) {
   );
 }
 console.log('\nRESULTADO:', allOk ? 'TODOS BATEM ✓' : 'DIVERGÊNCIA ✗');
-process.exit(allOk ? 0 : 1);
+
+/* ---- Cenário 2: regras novas (abatimento proporcional + média férias mix 2/3) ---- */
+console.log('\n=== Cenário 2: ALISSON abatimento R$10.000 / KENEDY 15 dias de férias ===');
+const params2 = new Map([
+  [163, { rep_codigo: 163, abatimento: 10000, tem_ferias: false, dias_ferias: 0 }],
+  [340, { rep_codigo: 340, abatimento: 0, tem_ferias: true, dias_ferias: 15 }],
+]);
+const res2 = eng.calcularAtacado(celulas, { ...cfg, parametros: params2 });
+
+const ali = res2.vendedores.find((v) => v.rep_codigo === 163);
+const ken = res2.vendedores.find((v) => v.rep_codigo === 340);
+
+// ALISSON: já estava na faixa máxima (>180k); abatimento NÃO muda o %, só escala o pago.
+const aliEsperado = Math.round(3124.95 * ((197229.02 - 10000) / 197229.02) * 100) / 100;
+const aliOk = Math.abs(Math.round(ali.valor_comissao * 100) / 100 - aliEsperado) < 0.02;
+console.log(
+  `ALISSON  base_real=${ali.base_real.toFixed(2)} fator=${ali.fator_abatimento.toFixed(5)} ` +
+  `%mix23=${ali.pct_mix23} comissao=${ali.valor_comissao.toFixed(2)} (esperado ~${aliEsperado}) ${aliOk ? 'OK' : 'XXXX'}`,
+);
+
+// KENEDY: total 42.555,56; sem férias %mix23=0,85%; com 15 dias o total p/ faixa dobra
+// (≈85k) e o %mix23 sobe p/ 1,0%. Conferimos que a faixa mudou e a comissão subiu.
+const kenSubiu = ken.pct_mix23 > 0.0085 && ken.valor_comissao > 509.42;
+console.log(
+  `KENEDY   total_faixa=${ken.total_faixa.toFixed(2)} %mix23=${ken.pct_mix23} ` +
+  `comissao=${ken.valor_comissao.toFixed(2)} (era 509,42; faixa do mix 2/3 subiu) ${kenSubiu ? 'OK' : 'XXXX'}`,
+);
+
+const cenario2Ok = aliOk && kenSubiu;
+console.log('\nCenário 2:', cenario2Ok ? 'OK ✓' : 'FALHOU ✗');
+process.exit(allOk && cenario2Ok ? 0 : 1);
