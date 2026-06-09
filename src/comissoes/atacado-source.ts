@@ -16,6 +16,18 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CelulaAtacado } from './atacado-engine';
 
+/** Item de venda do atacado (linha da relação por item — espelha a 443). */
+export interface ItemAtacadoRow {
+  dt_emissao: string | null;
+  cli_codigo: number | null;
+  cli_nome: string | null;
+  pro_codigo: number | null;
+  pro_descricao: string | null;
+  liquido_produto: number;
+  mix: number;
+  faixa: string;
+}
+
 @Injectable()
 export class AtacadoSource {
   private readonly logger = new Logger('AtacadoSource');
@@ -51,6 +63,45 @@ export class AtacadoSource {
       mix: Number(r.mix),
       faixa: String(r.faixa ?? '').trim().toUpperCase(),
       valor_vendido: Number(r.valor_vendido),
+    }));
+  }
+
+  /**
+   * Relação de vendas por item de UM vendedor no período (espelha a 443).
+   * Data como 'AAAA-MM-DD' (CONVERT 23) para não deslocar o dia no fuso.
+   * Ordenado por data desc, cliente, produto.
+   */
+  async lerItensRep(
+    dataIni: string,
+    dataFim: string,
+    repCodigo: number,
+  ): Promise<ItemAtacadoRow[]> {
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT
+        CONVERT(varchar(10), v.dt_emissao_convertida, 23) AS dt_emissao,
+        v.cli_codigo,
+        v.cli_nome,
+        v.pro_codigo,
+        v.pro_descricao,
+        v.liquido_produto,
+        v.mix_custo  AS mix,
+        v.faixa_mix  AS faixa
+      FROM dbo.vw_analise_vendas v
+      WHERE v.dt_emissao_convertida BETWEEN ${dataIni} AND ${dataFim}
+        AND v.mix_custo IS NOT NULL
+        AND v.faixa_mix IS NOT NULL
+        AND v.vendedor_venda = ${repCodigo}
+      ORDER BY v.dt_emissao_convertida DESC, v.cli_nome, v.pro_descricao`);
+
+    return rows.map((r) => ({
+      dt_emissao: r.dt_emissao ?? null,
+      cli_codigo: r.cli_codigo == null ? null : Number(r.cli_codigo),
+      cli_nome: r.cli_nome ?? null,
+      pro_codigo: r.pro_codigo == null ? null : Number(r.pro_codigo),
+      pro_descricao: r.pro_descricao ?? null,
+      liquido_produto: Number(r.liquido_produto),
+      mix: Number(r.mix),
+      faixa: String(r.faixa ?? '').trim().toUpperCase(),
     }));
   }
 }

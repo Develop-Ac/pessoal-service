@@ -29,6 +29,7 @@ import {
   RepresentanteAtacado,
   ResultadoComissaoAtacado,
   calcularAtacado,
+  percentualMix1,
 } from './atacado-engine';
 import {
   AbrirPeriodoDto,
@@ -681,19 +682,55 @@ export class ComissoesService {
       WHERE periodo_id = ${periodoId} ORDER BY total_vendido DESC`);
   }
 
-  /** Relatório de assinatura do atacado: resumo + quebra mix x faixa. */
+  /**
+   * Relatório de assinatura do atacado: resumo + quebra mix x faixa (totalização)
+   * + relação de vendas por item (espelha a 443). O % de cada item usa as MESMAS
+   * alíquotas do cálculo (pct_mix23 já ajustado por férias; mix 1 pela faixa
+   * conforme atingiu_meta) para a soma dos itens fechar com a comissão bruta.
+   */
   async relatorioAtacado(periodoId: number, repCodigo: number) {
-    await this.obterPeriodo(periodoId);
-    const resumo = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+    const periodo = await this.obterPeriodo(periodoId);
+    const resumoRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM dbo.ComissaoResultadoAtacado
       WHERE periodo_id = ${periodoId} AND rep_codigo = ${repCodigo}`);
+    const resumo = resumoRows[0] ?? null;
     const detalhe = await this.prisma.$queryRaw(Prisma.sql`
       SELECT mix, faixa, valor_vendido, pct_comissao, valor_comissao
       FROM dbo.ComissaoAtacadoDetalhe
       WHERE periodo_id = ${periodoId} AND rep_codigo = ${repCodigo}
       ORDER BY mix,
         CASE faixa WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 ELSE 9 END`);
-    return { resumo: resumo[0] ?? null, detalhe };
+
+    let itens: any[] = [];
+    if (resumo) {
+      const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
+      const cfg = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
+      const pctMix23 = Number(resumo.pct_mix23);
+      const atingiuMeta = !!resumo.atingiu_meta;
+      const raw = await this.atacado.lerItensRep(dataIniYmd, dataFimYmd, repCodigo);
+      itens = raw.map((it) => {
+        const pct =
+          it.mix === 1
+            ? percentualMix1(it.faixa, atingiuMeta, cfg.faixasMix1)
+            : it.mix === 2 || it.mix === 3
+              ? pctMix23
+              : 0;
+        return {
+          dt_emissao: it.dt_emissao,
+          cli_codigo: it.cli_codigo,
+          cli_nome: it.cli_nome,
+          pro_codigo: it.pro_codigo,
+          pro_descricao: it.pro_descricao,
+          liquido_produto: round2(it.liquido_produto),
+          mix: it.mix,
+          faixa: it.faixa,
+          pct_comissao: round6(pct),
+          valor_comissao: round2(it.liquido_produto * pct),
+        };
+      });
+    }
+
+    return { resumo, detalhe, itens };
   }
 
   /** Tabelas de alíquota do atacado (config editável). */
