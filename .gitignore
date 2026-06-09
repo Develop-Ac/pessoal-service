@@ -1,0 +1,8 @@
+node_modules
+.env
+dist
+arquivos/entrada
+arquivos/processados
+arquivos/erro
+arquivos/logs
+*.log

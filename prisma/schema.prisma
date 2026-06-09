@@ -1,0 +1,1360 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model CadastroColaboradores {
+  id                        Int       @id(map: "PK_CadastroColaboradores") @default(autoincrement())
+  matricula                 String?   @db.VarChar(20)
+  nome                      String    @db.VarChar(200)
+  departamento_folha        String?   @db.VarChar(200)
+  cpf                       String?   @db.VarChar(14)
+  centro_custo_padrao       String?   @db.VarChar(100)
+  tipo_alocacao             String?   @db.VarChar(20)
+  percentual_atacado        Decimal?  @default(0.00, map: "DF__CadastroC__perce__762C88DA") @db.Decimal(5, 2)
+  percentual_varejo         Decimal?  @default(0.00, map: "DF__CadastroC__perce__7720AD13") @db.Decimal(5, 2)
+  percentual_servico        Decimal?  @default(0.00, map: "DF__CadastroC__perce__7814D14C") @db.Decimal(5, 2)
+  percentual_corporativo    Decimal?  @default(0.00, map: "DF__CadastroC__perce__7908F585") @db.Decimal(5, 2)
+  ativo                     Boolean   @default(true, map: "DF__CadastroC__ativo__79FD19BE")
+  observacao                String?   @db.VarChar(1000)
+  data_cadastro             DateTime  @default(now(), map: "DF__CadastroC__data___7AF13DF7") @db.DateTime
+  data_atualizacao          DateTime? @db.DateTime
+  vigencia_inicial          String?   @db.Char(7)
+  vigencia_final            String?   @db.Char(7)
+  percentual_varejo_servico Decimal?  @default(0.00, map: "DF__CadastroC__perce__093F5D4E") @db.Decimal(5, 2)
+
+  @@index([nome], map: "IX_Colaboradores_Nome")
+}
+
+model Controle_ETL_Incremental {
+  tabela               String    @id(map: "PK__Controle__1698346341E6B4F4") @db.NVarChar(128)
+  last_cod_atualizacao BigInt
+  last_updated_at      DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_Controle_LastUpdatedAt")
+  last_run_status      String?   @db.VarChar(20)
+  last_run_message     String?   @db.NVarChar(4000)
+  last_dt_atualizacao  DateTime? @db.Date
+}
+
+model d_cadastro_representantes {
+  cod                Int     @id(map: "PK__d_cadast__D8360F7B4E93A0B6")
+  nome_representante String? @db.VarChar(255)
+}
+
+model d_calendario {
+  data            DateTime @id(map: "PK__d_calend__D9DE21E0E16FE1FA") @db.Date
+  ano             Int
+  mes             Int
+  dia             Int
+  dia_da_semana   String   @db.VarChar(20)
+  is_dia_util     Boolean
+  ano_comissional Int
+  mes_comissional Int
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model d_feriados {
+  data          String? @db.VarChar(50)
+  dia_da_semana String? @db.VarChar(50)
+  feriado       String? @db.VarChar(50)
+
+  @@ignore
+}
+
+model d_local_vendedores {
+  cod         Int     @id(map: "PK__d_local___D8360F7BCDEEA4F7")
+  local_venda String? @db.VarChar(255)
+}
+
+model d_planejamento_parametros {
+  CHAVE          String   @id(map: "PK__d_planej__B1BCC6AF479DB0D3") @db.VarChar(100)
+  VALOR_DECIMAL  Decimal? @db.Decimal(18, 6)
+  VALOR_TEXTO    String?  @db.VarChar(200)
+  DESCRICAO      String?  @db.VarChar(500)
+  ATIVO          Boolean  @default(true, map: "DF__d_planeja__ATIVO__1758727B")
+  DT_ATUALIZACAO DateTime @default(dbgenerated("sysdatetime()"), map: "DF__d_planeja__DT_AT__184C96B4")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model estados_stage {
+  codigo_uf String?  @db.VarChar(10)
+  uf        String?  @db.VarChar(2)
+  nome      String?  @db.NVarChar(120)
+  latitude  Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+  regiao    String?  @db.NVarChar(40)
+
+  @@ignore
+}
+
+model ETL_Execucao_Detalhes {
+  detalhe_id     BigInt        @id(map: "PK__ETL_Exec__4B084FC37A80D852") @default(autoincrement())
+  exec_id        BigInt
+  tabela         String        @db.NVarChar(128)
+  watermark_ant  BigInt?
+  watermark_novo BigInt?
+  lidos_delta    Int?
+  inseridos      Int?
+  atualizados    Int?
+  excluidos      Int?
+  iniciado_em    DateTime      @default(dbgenerated("sysdatetime()"), map: "DF__ETL_Execu__inici__03BB8E22")
+  finalizado_em  DateTime?
+  status         String?       @db.VarChar(20)
+  mensagem       String?       @db.NVarChar(4000)
+  ETL_Execucoes  ETL_Execucoes @relation(fields: [exec_id], references: [exec_id], onUpdate: NoAction, map: "FK__ETL_Execu__exec___02C769E9")
+}
+
+model etl_execucao_log {
+  ID                 Int       @id(map: "PK__etl_exec__3214EC274E07139C") @default(autoincrement())
+  PROCESSO           String    @db.VarChar(150)
+  DATA_INICIO        DateTime
+  DATA_FIM           DateTime?
+  STATUS_EXECUCAO    String    @db.VarChar(20)
+  MENSAGEM           String?   @db.VarChar(Max)
+  ETAPA_ATUAL        String?   @db.VarChar(200)
+  ULTIMA_ATUALIZACAO DateTime?
+}
+
+model etl_execucao_log_detalhe {
+  ID                 Int       @id(map: "PK__etl_exec__3214EC27243C6B8F") @default(autoincrement())
+  ID_EXECUCAO        Int
+  ORDEM_ETAPA        Int
+  NOME_ETAPA         String    @db.VarChar(200)
+  STATUS_ETAPA       String    @db.VarChar(20)
+  DATA_INICIO        DateTime
+  DATA_FIM           DateTime?
+  LINHAS_PROCESSADAS BigInt?
+  MENSAGEM           String?   @db.VarChar(Max)
+}
+
+model ETL_Execucoes {
+  exec_id               BigInt                  @id(map: "PK__ETL_Exec__3C4F114255867A8C") @default(autoincrement())
+  processo              String                  @db.NVarChar(128)
+  iniciado_em           DateTime                @default(dbgenerated("sysdatetime()"), map: "DF__ETL_Execu__inici__7FEAFD3E")
+  finalizado_em         DateTime?
+  status                String?                 @db.VarChar(20)
+  mensagem              String?                 @db.NVarChar(4000)
+  ETL_Execucao_Detalhes ETL_Execucao_Detalhes[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_colaborador_equivalente_mensal {
+  DATA_COMPETENCIA DateTime @db.Date
+  ANO              Int
+  MES              Int
+  LOCAL_VENDA      String   @db.VarChar(100)
+  QTD_EQUIVALENTE  Decimal  @db.Decimal(18, 6)
+  DT_CARGA         DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_colabor__DT_CA__30592A6F")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_colaborador_equivalente_mensal_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__22FF2F51")
+
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA], map: "IX_f_dre_base_01")
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_02")
+  @@index([GRUPO_SINTETICO_DRE, ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_03")
+  @@index([PC_CONTA], map: "IX_f_dre_base_PC_CONTA")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesa_com_pessoal {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__24E777C3")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesa_com_pessoal_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesa_ocupacao {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__26CFC035")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesa_ocupacao_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesas_comerciais {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__28B808A7")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesas_comerciais_01")
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA], map: "IX_f_dre_base_despesas_comerciais_02")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesas_gerais_administrativas {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__2AA05119")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesas_gerais_administrativas_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesas_tributarias {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String   @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String   @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String   @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String   @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Decimal  @db.Decimal(18, 6)
+  ORDEM_ANALITICA_DRE     Decimal  @db.Decimal(18, 6)
+  FLAG_DRE                Int
+  NIVEL_DRE               Int
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__4A18FC72")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesas_tributarias_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_despesas_veiculos {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__2C88998B")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_despesas_veiculos_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_impostos_sobre_lucro {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String   @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String   @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String   @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String   @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Decimal  @db.Decimal(18, 6)
+  ORDEM_ANALITICA_DRE     Decimal  @db.Decimal(18, 6)
+  FLAG_DRE                Int
+  NIVEL_DRE               Int
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__5F141958")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_impostos_sobre_lucro_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_outras_receitas_despesas_operacionais {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String   @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String   @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String   @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String   @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Decimal  @db.Decimal(18, 6)
+  ORDEM_ANALITICA_DRE     Decimal  @db.Decimal(18, 6)
+  FLAG_DRE                Int
+  NIVEL_DRE               Int
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__4C0144E4")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_outras_receitas_despesas_operacionais_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_resultado_financeiro {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String   @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String   @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String   @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String   @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Decimal  @db.Decimal(18, 6)
+  ORDEM_ANALITICA_DRE     Decimal  @db.Decimal(18, 6)
+  FLAG_DRE                Int
+  NIVEL_DRE               Int
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__5D2BD0E6")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_resultado_financeiro_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_dre_base_retirada_lucros {
+  EMPRESA                 String?  @db.VarChar(50)
+  LANCTO                  BigInt?
+  DATA_COMPETENCIA        DateTime @db.Date
+  ANO                     Int
+  MES                     Int
+  PC_CONTA                String?  @db.VarChar(50)
+  REP_CODIGO              Int?
+  LOCAL_VENDA             String?  @db.VarChar(100)
+  OPF_DESCRICAO           String?  @db.VarChar(200)
+  VALOR_CONVERTIDO        Decimal  @db.Decimal(18, 2)
+  DESCRICAO_ANALITICA_DRE String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE     String?  @db.VarChar(100)
+  ORDEM_GRUPO_DRE         Int?
+  ORDEM_ANALITICA_DRE     Int?
+  FLAG_DRE                Int?
+  NIVEL_DRE               Int?
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_dre_bas__DT_CA__2E70E1FD")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_dre_base_retirada_lucros_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_faturamento_canal_mensal {
+  ANO           Int
+  MES           Int
+  LOCAL_VENDA   String   @db.VarChar(100)
+  RECEITA_CANAL Decimal  @db.Decimal(18, 2)
+  DT_CARGA      DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_faturam__DT_CA__39E294A9")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_faturamento_canal_mensal_01")
+  @@ignore
+}
+
+model f_forecast_despesa_conta_canal_mensal {
+  ANO                          Int
+  MES                          Int
+  DATA_COMPETENCIA             DateTime @db.Date
+  LOCAL_VENDA                  String   @db.VarChar(100)
+  VERSAO_FORECAST              String   @db.VarChar(30)
+  MES_CORTE                    Int
+  PC_CONTA                     String   @db.VarChar(50)
+  DESCRICAO_ANALITICA_DRE      String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE          String?  @db.VarChar(100)
+  VALOR_META_ORIGINAL          Decimal  @default(0, map: "DF__f_forecas__VALOR__4336F4B9") @db.Decimal(18, 2)
+  VALOR_REAL                   Decimal  @default(0, map: "DF__f_forecas__VALOR__442B18F2") @db.Decimal(18, 2)
+  VALOR_META_REVISADA          Decimal  @default(0, map: "DF__f_forecas__VALOR__451F3D2B") @db.Decimal(18, 2)
+  VALOR_MAXIMO_REVISADO        Decimal  @default(0, map: "DF__f_forecas__VALOR__46136164") @db.Decimal(18, 2)
+  GAP_DESPESA                  Decimal  @default(0, map: "DF__f_forecas__GAP_D__4707859D") @db.Decimal(18, 2)
+  ECONOMIA_NECESSARIA_RESTANTE Decimal  @default(0, map: "DF__f_forecas__ECONO__47FBA9D6") @db.Decimal(18, 2)
+  TIPO_LINHA                   String   @default("FORECAST", map: "DF__f_forecas__TIPO___48EFCE0F") @db.VarChar(20)
+  STATUS_META                  String   @default("SEM ANALISE", map: "DF__f_forecas__STATU__49E3F248") @db.VarChar(50)
+  DT_CARGA                     DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_forecas__DT_CA__4AD81681")
+
+  @@id([ANO, MES, LOCAL_VENDA, PC_CONTA, VERSAO_FORECAST], map: "PK_f_forecast_despesa_conta_canal_mensal")
+  @@index([ANO, MES_CORTE, LOCAL_VENDA], map: "IX_f_forecast_despesa_conta_canal_mensal_1")
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA, PC_CONTA], map: "IX_f_forecast_despesa_conta_canal_mensal_2")
+}
+
+model f_forecast_resultado_canal_mensal {
+  ANO                                    Int
+  MES                                    Int
+  DATA_COMPETENCIA                       DateTime @db.Date
+  LOCAL_VENDA                            String   @db.VarChar(100)
+  VERSAO_FORECAST                        String   @db.VarChar(30)
+  MES_CORTE                              Int
+  RECEITA_LIQUIDA_META_ORIGINAL          Decimal  @default(0, map: "DF__f_forecas__RECEI__22CA2527") @db.Decimal(18, 2)
+  RECEITA_LIQUIDA_REAL                   Decimal  @default(0, map: "DF__f_forecas__RECEI__23BE4960") @db.Decimal(18, 2)
+  RECEITA_LIQUIDA_META_REVISADA          Decimal  @default(0, map: "DF__f_forecas__RECEI__24B26D99") @db.Decimal(18, 2)
+  GAP_RECEITA_LIQUIDA                    Decimal  @default(0, map: "DF__f_forecas__GAP_R__25A691D2") @db.Decimal(18, 2)
+  CUSTO_META_ORIGINAL                    Decimal  @default(0, map: "DF__f_forecas__CUSTO__269AB60B") @db.Decimal(18, 2)
+  CUSTO_REAL                             Decimal  @default(0, map: "DF__f_forecas__CUSTO__278EDA44") @db.Decimal(18, 2)
+  CUSTO_META_REVISADA                    Decimal  @default(0, map: "DF__f_forecas__CUSTO__2882FE7D") @db.Decimal(18, 2)
+  GAP_CUSTO                              Decimal  @default(0, map: "DF__f_forecas__GAP_C__297722B6") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_META_ORIGINAL      Decimal  @default(0, map: "DF__f_forecas__DESPE__2A6B46EF") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_REAL               Decimal  @default(0, map: "DF__f_forecas__DESPE__2B5F6B28") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_META_REVISADA      Decimal  @default(0, map: "DF__f_forecas__DESPE__2C538F61") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_MAXIMA_REVISADA    Decimal  @default(0, map: "DF__f_forecas__DESPE__2D47B39A") @db.Decimal(18, 2)
+  GAP_DESPESA_OPERACIONAL                Decimal  @default(0, map: "DF__f_forecas__GAP_D__2E3BD7D3") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_META_ORIGINAL     Decimal  @default(0, map: "DF__f_forecas__RESUL__2F2FFC0C") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_REAL              Decimal  @default(0, map: "DF__f_forecas__RESUL__30242045") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_META_REVISADA     Decimal  @default(0, map: "DF__f_forecas__RESUL__3118447E") @db.Decimal(18, 2)
+  GAP_RESULTADO_FINANCEIRO               Decimal  @default(0, map: "DF__f_forecas__GAP_R__320C68B7") @db.Decimal(18, 2)
+  IMPOSTOS_META_ORIGINAL                 Decimal  @default(0, map: "DF__f_forecas__IMPOS__33008CF0") @db.Decimal(18, 2)
+  IMPOSTOS_REAL                          Decimal  @default(0, map: "DF__f_forecas__IMPOS__33F4B129") @db.Decimal(18, 2)
+  IMPOSTOS_META_REVISADA                 Decimal  @default(0, map: "DF__f_forecas__IMPOS__34E8D562") @db.Decimal(18, 2)
+  GAP_IMPOSTOS                           Decimal  @default(0, map: "DF__f_forecas__GAP_I__35DCF99B") @db.Decimal(18, 2)
+  LUCRO_LIQUIDO_META_ORIGINAL            Decimal  @default(0, map: "DF__f_forecas__LUCRO__36D11DD4") @db.Decimal(18, 2)
+  LUCRO_LIQUIDO_REAL                     Decimal  @default(0, map: "DF__f_forecas__LUCRO__37C5420D") @db.Decimal(18, 2)
+  LUCRO_LIQUIDO_META_REVISADA            Decimal  @default(0, map: "DF__f_forecas__LUCRO__38B96646") @db.Decimal(18, 2)
+  GAP_LUCRO_LIQUIDO                      Decimal  @default(0, map: "DF__f_forecas__GAP_L__39AD8A7F") @db.Decimal(18, 2)
+  MARGEM_LIQUIDA_META_ORIGINAL_PCT       Decimal  @default(0, map: "DF__f_forecas__MARGE__3AA1AEB8") @db.Decimal(18, 6)
+  MARGEM_LIQUIDA_REAL_PCT                Decimal  @default(0, map: "DF__f_forecas__MARGE__3B95D2F1") @db.Decimal(18, 6)
+  MARGEM_LIQUIDA_META_REVISADA_PCT       Decimal  @default(0, map: "DF__f_forecas__MARGE__3C89F72A") @db.Decimal(18, 6)
+  GAP_MARGEM_LIQUIDA_PCT                 Decimal  @default(0, map: "DF__f_forecas__GAP_M__3D7E1B63") @db.Decimal(18, 6)
+  TIPO_LINHA                             String   @default("FORECAST", map: "DF__f_forecas__TIPO___3E723F9C") @db.VarChar(20)
+  STATUS_META                            String   @default("SEM ANALISE", map: "DF__f_forecas__STATU__3F6663D5") @db.VarChar(50)
+  DT_CARGA                               DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_forecas__DT_CA__405A880E")
+  RECEITA_LIQUIDA_FORECAST_RESTANTE      Decimal  @default(0, map: "DF__f_forecas__RECEI__4EA8A765") @db.Decimal(18, 2)
+  LUCRO_NECESSARIO_RESTANTE              Decimal  @default(0, map: "DF__f_forecas__LUCRO__4F9CCB9E") @db.Decimal(18, 2)
+  CUSTO_FORECAST_RESTANTE                Decimal  @default(0, map: "DF__f_forecas__CUSTO__5090EFD7") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_FORECAST_RESTANTE Decimal  @default(0, map: "DF__f_forecas__RESUL__51851410") @db.Decimal(18, 2)
+  IMPOSTOS_FORECAST_RESTANTE             Decimal  @default(0, map: "DF__f_forecas__IMPOS__52793849") @db.Decimal(18, 2)
+  FATOR_TENDENCIA_RECEITA                Decimal  @default(0, map: "DF__f_forecas__FATOR__536D5C82") @db.Decimal(18, 6)
+  PCT_CUSTO_FORECAST                     Decimal  @default(0, map: "DF__f_forecas__PCT_C__546180BB") @db.Decimal(18, 6)
+
+  @@id([ANO, MES, LOCAL_VENDA, VERSAO_FORECAST], map: "PK_f_forecast_resultado_canal_mensal")
+  @@index([ANO, MES_CORTE, LOCAL_VENDA], map: "IX_f_forecast_resultado_canal_mensal_1")
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA], map: "IX_f_forecast_resultado_canal_mensal_2")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_metas_vendedores {
+  cod_vendedor Int?
+  vendedor     String?   @db.VarChar(50)
+  data_inicial DateTime? @db.Date
+  data_final   DateTime? @db.Date
+  valor_total  Decimal?  @db.Decimal(18, 2)
+  valor_diario Decimal?  @db.Decimal(18, 4)
+  mes          Int?
+  ano          Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_percentual_faturamento_canal {
+  ANO                     Int
+  MES                     Int
+  LOCAL_VENDA             String   @db.VarChar(100)
+  RECEITA_CANAL           Decimal  @db.Decimal(18, 2)
+  RECEITA_TOTAL_MES       Decimal  @db.Decimal(18, 2)
+  PERCENTUAL_RATEIO_TOTAL Decimal  @db.Decimal(18, 10)
+  PCT_VAREJO_DENTRO_VS    Decimal? @db.Decimal(18, 10)
+  PCT_SERVICO_DENTRO_VS   Decimal? @db.Decimal(18, 10)
+  DT_CARGA                DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_percent__DT_CA__3DB3258D")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_percentual_faturamento_canal_01")
+  @@ignore
+}
+
+model f_planejamento_despesa_conta_canal_mensal {
+  ANO                       Int
+  MES                       Int
+  DATA_COMPETENCIA          DateTime @db.Date
+  LOCAL_VENDA               String   @db.VarChar(100)
+  VERSAO_PLANEJAMENTO       String   @default("OFICIAL", map: "DF__f_planeja__VERSA__0AF29B96") @db.VarChar(30)
+  PC_CONTA                  String   @db.VarChar(50)
+  DESCRICAO_ANALITICA_DRE   String?  @db.VarChar(200)
+  GRUPO_SINTETICO_DRE       String?  @db.VarChar(100)
+  CRITERIO_RATEIO           String?  @db.VarChar(50)
+  VALOR_REAL                Decimal  @default(0, map: "DF__f_planeja__VALOR__0BE6BFCF") @db.Decimal(18, 2)
+  VALOR_ANO_ANTERIOR        Decimal  @default(0, map: "DF__f_planeja__VALOR__0CDAE408") @db.Decimal(18, 2)
+  PCT_PARTICIPACAO_CANAL    Decimal  @default(0, map: "DF__f_planeja__PCT_P__0DCF0841") @db.Decimal(18, 6)
+  PCT_PARTICIPACAO_AJUSTADA Decimal  @default(0, map: "DF__f_planeja__PCT_P__0EC32C7A") @db.Decimal(18, 6)
+  CRESCIMENTO_CONTA_PCT     Decimal  @default(0, map: "DF__f_planeja__CRESC__0FB750B3") @db.Decimal(18, 6)
+  VALOR_META_MAXIMO         Decimal  @default(0, map: "DF__f_planeja__VALOR__10AB74EC") @db.Decimal(18, 2)
+  ECONOMIA_NECESSARIA       Decimal  @default(0, map: "DF__f_planeja__ECONO__119F9925") @db.Decimal(18, 2)
+  GAP_DESPESA               Decimal  @default(0, map: "DF__f_planeja__GAP_D__1293BD5E") @db.Decimal(18, 2)
+  STATUS_META               String   @default("SEM ANALISE", map: "DF__f_planeja__STATU__1387E197") @db.VarChar(50)
+  DT_CARGA                  DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_planeja__DT_CA__147C05D0")
+
+  @@id([ANO, MES, LOCAL_VENDA, PC_CONTA, VERSAO_PLANEJAMENTO], map: "PK_f_planejamento_despesa_conta_canal_mensal")
+  @@index([PC_CONTA, ANO, MES, LOCAL_VENDA], map: "IX_f_planejamento_despesa_conta_canal_mensal_conta")
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA], map: "IX_f_planejamento_despesa_conta_canal_mensal_data")
+  @@index([STATUS_META, DATA_COMPETENCIA], map: "IX_f_planejamento_despesa_conta_canal_mensal_status")
+}
+
+model f_planejamento_resultado_canal_mensal {
+  ANO                           Int
+  MES                           Int
+  DATA_COMPETENCIA              DateTime @db.Date
+  LOCAL_VENDA                   String   @db.VarChar(100)
+  VERSAO_PLANEJAMENTO           String   @default("OFICIAL", map: "DF__f_planeja__VERSA__63D8CE75") @db.VarChar(30)
+  TIPO_CRESCIMENTO              String?  @db.VarChar(30)
+  OBS_CALCULO                   String?  @db.VarChar(500)
+  RECEITA_BRUTA_REAL            Decimal  @default(0, map: "DF__f_planeja__RECEI__64CCF2AE") @db.Decimal(18, 2)
+  ABATIMENTO_REAL               Decimal  @default(0, map: "DF__f_planeja__ABATI__65C116E7") @db.Decimal(18, 2)
+  RECEITA_LIQUIDA_REAL          Decimal  @default(0, map: "DF__f_planeja__RECEI__66B53B20") @db.Decimal(18, 2)
+  CUSTO_REAL                    Decimal  @default(0, map: "DF__f_planeja__CUSTO__67A95F59") @db.Decimal(18, 2)
+  CUSTO_PCT_REAL                Decimal  @default(0, map: "DF__f_planeja__CUSTO__689D8392") @db.Decimal(18, 6)
+  DESPESA_OPERACIONAL_REAL      Decimal  @default(0, map: "DF__f_planeja__DESPE__6991A7CB") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_REAL     Decimal  @default(0, map: "DF__f_planeja__RESUL__6A85CC04") @db.Decimal(18, 2)
+  IMPOSTOS_REAL                 Decimal  @default(0, map: "DF__f_planeja__IMPOS__6B79F03D") @db.Decimal(18, 2)
+  LUCRO_LIQUIDO_REAL            Decimal  @default(0, map: "DF__f_planeja__LUCRO__6C6E1476") @db.Decimal(18, 2)
+  MARGEM_LIQUIDA_REAL_PCT       Decimal  @default(0, map: "DF__f_planeja__MARGE__6D6238AF") @db.Decimal(18, 6)
+  RECEITA_BRUTA_AA              Decimal  @default(0, map: "DF__f_planeja__RECEI__6E565CE8") @db.Decimal(18, 2)
+  ABATIMENTO_AA                 Decimal  @default(0, map: "DF__f_planeja__ABATI__6F4A8121") @db.Decimal(18, 2)
+  RECEITA_LIQUIDA_AA            Decimal  @default(0, map: "DF__f_planeja__RECEI__703EA55A") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_AA        Decimal  @default(0, map: "DF__f_planeja__DESPE__7132C993") @db.Decimal(18, 2)
+  CUSTO_AA                      Decimal  @default(0, map: "DF__f_planeja__CUSTO__7226EDCC") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_AA       Decimal  @default(0, map: "DF__f_planeja__RESUL__731B1205") @db.Decimal(18, 2)
+  IMPOSTOS_AA                   Decimal  @default(0, map: "DF__f_planeja__IMPOS__740F363E") @db.Decimal(18, 2)
+  CRESCIMENTO_RECEITA_PCT       Decimal  @default(0, map: "DF__f_planeja__CRESC__75035A77") @db.Decimal(18, 6)
+  CRESCIMENTO_DESPESA_PCT       Decimal  @default(0, map: "DF__f_planeja__CRESC__75F77EB0") @db.Decimal(18, 6)
+  CRESCIMENTO_CUSTO_PCT         Decimal  @default(0, map: "DF__f_planeja__CRESC__76EBA2E9") @db.Decimal(18, 6)
+  CRESCIMENTO_RESULTADO_FIN_PCT Decimal  @default(0, map: "DF__f_planeja__CRESC__77DFC722") @db.Decimal(18, 6)
+  CRESCIMENTO_IMPOSTOS_PCT      Decimal  @default(0, map: "DF__f_planeja__CRESC__78D3EB5B") @db.Decimal(18, 6)
+  RECEITA_LIQUIDA_META          Decimal  @default(0, map: "DF__f_planeja__RECEI__79C80F94") @db.Decimal(18, 2)
+  RECEITA_BRUTA_META            Decimal  @default(0, map: "DF__f_planeja__RECEI__7ABC33CD") @db.Decimal(18, 2)
+  ABATIMENTO_META               Decimal  @default(0, map: "DF__f_planeja__ABATI__7BB05806") @db.Decimal(18, 2)
+  CUSTO_META                    Decimal  @default(0, map: "DF__f_planeja__CUSTO__7CA47C3F") @db.Decimal(18, 2)
+  DESPESA_OPERACIONAL_MAXIMA    Decimal  @default(0, map: "DF__f_planeja__DESPE__7D98A078") @db.Decimal(18, 2)
+  RESULTADO_FINANCEIRO_META     Decimal  @default(0, map: "DF__f_planeja__RESUL__7E8CC4B1") @db.Decimal(18, 2)
+  IMPOSTOS_META                 Decimal  @default(0, map: "DF__f_planeja__IMPOS__7F80E8EA") @db.Decimal(18, 2)
+  LUCRO_ALVO_PCT                Decimal  @default(0, map: "DF__f_planeja__LUCRO__00750D23") @db.Decimal(18, 6)
+  LUCRO_LIQUIDO_META            Decimal  @default(0, map: "DF__f_planeja__LUCRO__0169315C") @db.Decimal(18, 2)
+  MARGEM_LIQUIDA_META_PCT       Decimal  @default(0, map: "DF__f_planeja__MARGE__025D5595") @db.Decimal(18, 6)
+  RECEITA_LIQUIDA_NECESSARIA    Decimal  @default(0, map: "DF__f_planeja__RECEI__035179CE") @db.Decimal(18, 2)
+  FOLGA_OPERACIONAL             Decimal  @default(0, map: "DF__f_planeja__FOLGA__04459E07") @db.Decimal(18, 2)
+  GAP_CRESCIMENTO_PCT           Decimal  @default(0, map: "DF__f_planeja__GAP_C__0539C240") @db.Decimal(18, 6)
+  GAP_LUCRO                     Decimal  @default(0, map: "DF__f_planeja__GAP_L__062DE679") @db.Decimal(18, 2)
+  STATUS_META                   String   @default("SEM ANALISE", map: "DF__f_planeja__STATU__07220AB2") @db.VarChar(50)
+  DT_CARGA                      DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_planeja__DT_CA__08162EEB")
+
+  @@id([ANO, MES, LOCAL_VENDA, VERSAO_PLANEJAMENTO], map: "PK_f_planejamento_resultado_canal_mensal")
+  @@index([DATA_COMPETENCIA, LOCAL_VENDA], map: "IX_f_planejamento_resultado_canal_mensal_data")
+  @@index([LOCAL_VENDA, ANO, MES], map: "IX_f_planejamento_resultado_canal_mensal_local")
+  @@index([STATUS_META, DATA_COMPETENCIA], map: "IX_f_planejamento_resultado_canal_mensal_status")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_receita_bruta_contabil_canal_mensal {
+  ANO                    Int
+  MES                    Int
+  LOCAL_VENDA            String   @db.VarChar(100)
+  RECEITA_BRUTA_CONTABIL Decimal  @db.Decimal(18, 2)
+  DT_CARGA               DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_receita__DT_CA__4FD1D5C8")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_receita_bruta_contabil_canal_mensal_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_tickets_mensal {
+  ANO           Int
+  MES           Int
+  LOCAL_VENDA   String   @db.VarChar(100)
+  TOTAL_TICKETS BigInt
+  DT_CARGA      DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_tickets__DT_CA__3BCADD1B")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_tickets_mensal_01")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model f_vendas_detalhada_base {
+  EMPRESA               String?  @db.VarChar(50)
+  NFS                   BigInt
+  NOTA_FISCAL           String?  @db.VarChar(50)
+  SERIE                 String?  @db.VarChar(20)
+  CHAVE_NFE             String?  @db.VarChar(60)
+  ITEM                  Int?
+  COD_ATUALIZACAO       BigInt?
+  DT_EMISSAO            String?  @db.VarChar(50)
+  DT_EMISSAO_CONVERTIDA DateTime @db.Date
+  DT_CANCELAMENTO       String?  @db.VarChar(50)
+  OPF_CODIGO            Int?
+  OPF_DESCRICAO         String?  @db.VarChar(200)
+  CLI_CODIGO            Int?
+  CLI_NOME              String?  @db.VarChar(200)
+  UF                    String?  @db.VarChar(10)
+  CIDADE                String?  @db.VarChar(150)
+  INDICADOR_PRESENCA    String?  @db.VarChar(20)
+  BASE_ICMS             Decimal? @db.Decimal(18, 2)
+  VALOR_ICMS            Decimal? @db.Decimal(18, 2)
+  TOTAL_PRODUTOS        Decimal? @db.Decimal(18, 2)
+  VALOR_DESCTO          Decimal? @db.Decimal(18, 2)
+  TOTAL_NOTA            Decimal? @db.Decimal(18, 2)
+  GRP_CODIGO            Int?
+  GRP_DESCRICAO         String?  @db.VarChar(200)
+  SUBGRP_CODIGO         Int?
+  SUBGRP_DESCRICAO      String?  @db.VarChar(200)
+  MAR_DESCRICAO         String?  @db.VarChar(200)
+  PRO_CODIGO            Int?
+  PRO_DESCRICAO         String?  @db.VarChar(250)
+  NCM                   String?  @db.VarChar(30)
+  CST                   String?  @db.VarChar(20)
+  CFOP                  String?  @db.VarChar(20)
+  UNIDADE_COMERCIAL     String?  @db.VarChar(20)
+  QUANTIDADE            Decimal? @db.Decimal(18, 4)
+  UNITARIO              Decimal? @db.Decimal(18, 6)
+  TOTAL                 Decimal? @db.Decimal(18, 2)
+  DESC_PRODUTO          Decimal? @db.Decimal(18, 2)
+  QTDE_DEVOLVIDA        Decimal? @db.Decimal(18, 4)
+  PROMOCAO              String?  @db.VarChar(50)
+  PRECO_VENDA           Decimal? @db.Decimal(18, 6)
+  PRECO_CUSTO           Decimal? @db.Decimal(18, 6)
+  PRECO_CUSTO_COMERCIAL Decimal? @db.Decimal(18, 6)
+  FAIXA_CUSTO           String?  @db.VarChar(50)
+  MIX_CUSTO             String?  @db.VarChar(50)
+  FAIXA_MIX             String?  @db.VarChar(50)
+  ORDEM_SERVICO         String?  @db.VarChar(50)
+  VENDEDOR_NOTA         Int?
+  VENDEDOR_ITEM         Int?
+  VENDEDOR_VENDA        Int?
+  NOME_REPRESENTANTE    String?  @db.VarChar(200)
+  ANO                   Int
+  MES                   Int
+  MES_COMISSIONAL       Int
+  ANO_COMISSIONAL       Int
+  TOTAL_DEVOLUCOES      Decimal  @db.Decimal(18, 2)
+  TOTAL_PRODUTOS2       Decimal  @db.Decimal(18, 2)
+  TOTAL_DESCONTO        Decimal  @db.Decimal(18, 2)
+  CUSTO_PRODUTO         Decimal  @db.Decimal(18, 2)
+  LOCAL_VENDA_ORIGEM    String?  @db.VarChar(100)
+  LOCAL_VENDA           String   @db.VarChar(100)
+  DT_CARGA              DateTime @default(dbgenerated("sysdatetime()"), map: "DF__f_vendas___DT_CA__37FA4C37")
+
+  @@index([ANO, MES, LOCAL_VENDA], map: "IX_f_vendas_detalhada_base_01")
+  @@index([DT_EMISSAO_CONVERTIDA, LOCAL_VENDA], map: "IX_f_vendas_detalhada_base_02")
+  @@ignore
+}
+
+model Fato_CarteiraVendedorDiaria {
+  DataSnapshot       DateTime @db.Date
+  RepresentanteID    Int
+  NomeRepresentante  String?  @db.VarChar(100)
+  QuantidadeClientes Int?
+
+  @@id([DataSnapshot, RepresentanteID], map: "PK_Fato_CarteiraVendedorDiaria")
+}
+
+model FolhaValoresMensais {
+  id             Int      @id(map: "PK_FolhaValoresMensais") @default(autoincrement())
+  competencia    String   @db.Char(7)
+  matricula      String   @db.VarChar(20)
+  valor_liquido  Decimal  @db.Decimal(15, 2)
+  arquivo_origem String   @db.VarChar(500)
+  data_criacao   DateTime @default(now(), map: "DF__FolhaValo__data___047AA831") @db.DateTime
+  cpf            String?  @db.VarChar(14)
+
+  @@index([competencia, arquivo_origem], map: "IX_FolhaValores_Comp_Arquivo")
+}
+
+model ImportacaoFolhaBruta {
+  id                 Int      @id(map: "PK_ImportacaoFolhaBruta") @default(autoincrement())
+  competencia        String   @db.Char(7)
+  matricula          String?  @db.VarChar(20)
+  nome               String   @db.VarChar(200)
+  departamento_folha String?  @db.VarChar(200)
+  cpf                String?  @db.VarChar(14)
+  valor_liquido      Decimal? @db.Decimal(15, 2)
+  tipo_registro      String?  @db.VarChar(20)
+  arquivo_origem     String   @db.VarChar(500)
+  data_importacao    DateTime @default(now(), map: "DF__Importaca__data___73501C2F") @db.DateTime
+
+  @@index([competencia], map: "IX_ImportacaoFolha_Competencia")
+  @@index([competencia, matricula], map: "IX_ImportacaoFolha_Competencia_Matricula")
+  @@index([matricula], map: "IX_ImportacaoFolha_Matricula")
+}
+
+model LogImportacao {
+  id                        Int      @id(map: "PK_LogImportacao") @default(autoincrement())
+  competencia               String   @db.Char(7)
+  arquivo_origem            String   @db.VarChar(500)
+  data_execucao             DateTime @default(now(), map: "DF__LogImport__data___7DCDAAA2") @db.DateTime
+  total_linhas_extraidas    Int?     @default(0, map: "DF__LogImport__total__7EC1CEDB")
+  total_gravados            Int?     @default(0, map: "DF__LogImport__total__7FB5F314")
+  total_falhas              Int?     @default(0, map: "DF__LogImport__total__00AA174D")
+  total_novos_colaboradores Int?     @default(0, map: "DF__LogImport__total__019E3B86")
+  status                    String   @db.VarChar(20)
+  mensagem                  String?  @db.VarChar(2000)
+
+  @@index([competencia], map: "IX_LogImportacao_Competencia")
+}
+
+model LogRotinas {
+  LogID        Int       @id(map: "PK__LogRotin__5E5499A84E5F507C") @default(autoincrement())
+  NomeProcesso String?   @db.VarChar(100)
+  Mensagem     String?   @db.VarChar(Max)
+  DataHora     DateTime? @default(now(), map: "DF__LogRotina__DataH__3C34F16F") @db.DateTime
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model municipios_stage {
+  codigo_ibge  String? @db.VarChar(10)
+  nome         String? @db.NVarChar(160)
+  latitude     Decimal @db.Decimal(10, 7)
+  longitude    Decimal @db.Decimal(10, 7)
+  capital      String? @db.VarChar(10)
+  codigo_uf    String? @db.VarChar(10)
+  siafi_id     String? @db.VarChar(10)
+  ddd          String? @db.VarChar(10)
+  fuso_horario String? @db.NVarChar(60)
+
+  @@ignore
+}
+
+model opex_por_canal {
+  CANAL_VENDA String  @id(map: "PK_opex_por_canal") @db.NVarChar(60)
+  OPEX        Decimal @db.Decimal(9, 4)
+}
+
+model Stage_Clientes {
+  cli_codigo                      Int
+  cli_nome                        String?   @db.VarChar(255)
+  uf                              String?   @db.Char(2)
+  cidade                          String?   @db.VarChar(100)
+  fone                            String?   @db.VarChar(50)
+  contato                         String?   @db.VarChar(100)
+  data_ult_compra                 DateTime? @db.DateTime
+  rep_codigo                      Int?
+  inativo                         String?   @db.Char(1)
+  tabela_preco                    String?   @db.VarChar(50)
+  COD_ATUALIZACAO                 BigInt?
+  EMPRESA                         Int
+  ENDERECO                        String?   @db.NVarChar(60)
+  BAIRRO                          String?   @db.NVarChar(30)
+  CEP                             String?   @db.NVarChar(9)
+  PESSOA                          String?   @db.NVarChar(1)
+  CPF_CNPJ                        String?   @db.NVarChar(20)
+  RG_IE                           String?   @db.NVarChar(20)
+  FAX                             String?   @db.NVarChar(30)
+  CELULAR                         String?   @db.NVarChar(30)
+  LIMITE_CREDITO                  Float?
+  DT_NASCIMENTO                   DateTime? @db.Date
+  DT_CADASTRO                     DateTime? @db.Date
+  EMPRESA_TRABALHA                String?   @db.NVarChar(70)
+  EMPRESA_FONE                    String?   @db.NVarChar(30)
+  RENDA_MENSAL                    Float?
+  VALOR_ULT_COMPRA                Float?
+  COB_ENDERECO                    String?   @db.NVarChar(60)
+  COB_CIDADE                      String?   @db.NVarChar(30)
+  COB_BAIRRO                      String?   @db.NVarChar(30)
+  COB_UF                          String?   @db.NVarChar(2)
+  COB_CEP                         String?   @db.NVarChar(9)
+  CARGO                           String?   @db.NVarChar(30)
+  DT_ADMISSAO                     DateTime? @db.Date
+  NOME_FANTASIA                   String?   @db.NVarChar(40)
+  SALDO_CREDOR                    Float?
+  ATRASO_MEDIO                    Int?
+  NRO_COMPRAS                     Int?
+  TOTAL_COMPRAS                   Float?
+  CHQ_SEM_FUNDOS                  Int?
+  OBSERVACAO                      String?   @db.NVarChar(Max)
+  CON_CODIGO                      Int?
+  NATURALIDADE                    String?   @db.NVarChar(40)
+  SEXO                            String?   @db.NVarChar(1)
+  SPC                             String?   @db.NVarChar(1)
+  DATA_SPC                        DateTime? @db.Date
+  MANEQUIM                        Int?
+  CALCADO                         Int?
+  TAXA_JUROS                      Float?
+  INSC_ESTADUAL                   String?   @db.NVarChar(20)
+  NAO_BLOQUEAR                    String?   @db.NVarChar(1)
+  CONJUGE_EMPRESA                 String?   @db.NVarChar(70)
+  CONJUGE_CARGO                   String?   @db.NVarChar(30)
+  CONJUGE_ADMISSAO                DateTime? @db.Date
+  CONJUGE_FONE_EMP                String?   @db.NVarChar(30)
+  CONJUGE_RENDA                   Float?
+  NUMERO                          String?   @db.NVarChar(10)
+  CID_CODIGO                      Int?
+  USU_CODIGO                      Int?
+  COMPLEMENTO                     String?   @db.NVarChar(30)
+  REG_CODIGO                      Int?
+  BLOQUEAR_VENDA_CREDIARIO        String?   @db.NVarChar(1)
+  BLOQUEAR_VENDA_CHEQUE_PRE       String?   @db.NVarChar(1)
+  BLOQUEAR_VENDA_CHEQUE_AVISTA    String?   @db.NVarChar(1)
+  DESCONTO_PADRAO                 Float?
+  INSC_MUNICIPAL                  String?   @db.NVarChar(20)
+  FRETE_POR_CONTA                 String?   @db.NVarChar(1)
+  SERASA                          String?   @db.NVarChar(1)
+  DATA_SERASA                     DateTime? @db.Date
+  SITUACAO_TRIBUTARIA_ISSQN       String?   @db.NVarChar(1)
+  INDICADOR_PRESENCA              Int?      @db.SmallInt
+  INDICADOR_IE_DESTINATARIO       Int?      @db.SmallInt
+  INDICADOR_FINAL                 Int?      @db.SmallInt
+  DATA_ULTIMA_ATUALIZACAO         DateTime? @db.Date
+  PAIS_CODIGO                     String?   @db.NVarChar(4)
+  PERC_DESCTO_PAGTO_BOLETO_VENCTO Int?
+  SOMENTE_NFE                     String?   @db.NVarChar(1)
+  SOLICITAR_PEDIDO_COMPRA         String?   @db.NVarChar(1)
+  MOTIVO_DESONERACAO              Int?      @db.SmallInt
+  ST_DESONERACAO_CODIGO           String?   @db.NVarChar(5)
+  CP_CODIGO                       Int?
+  FP_ENTRADA                      String?   @db.NVarChar(3)
+  FP_DEMAIS_PARCELAS              String?   @db.NVarChar(3)
+  DESCONTO_MAXIMO                 Int?
+  INCLUIR_IPI_BASE_ICMS           String?   @db.NVarChar(1)
+  RETENCAO_IRRF_CSLL              String?   @db.NVarChar(8)
+  COD_REGIME_TRIBUTARIO           String?   @db.NVarChar(1)
+  SPC_NUMERO_OCORRENCIAS          Int?      @db.SmallInt
+  SPC_DATA_ULTIMA_OCORRENCIA      DateTime? @db.Date
+  SPC_VALOR_TOTAL_NEGATIVADO      Float?
+  TEM_PROTESTO                    String?   @db.NVarChar(1)
+  QUANTIDADE_PROTESTOS            Int?      @db.SmallInt
+  PROTESTO_DATA_ULTIMA_OCORRENCIA DateTime? @db.Date
+  PROTESTO_VALOR_TOTAL            Float?
+  SERASA_SCORE                    Int?      @db.SmallInt
+  SERASA_NUMERO_OCORRENCIAS       Int?      @db.SmallInt
+  SERASA_DATA_ULTIMA_OCORRENCIA   DateTime? @db.Date
+  SERASA_VALOR_TOTAL_NEGATIVADO   Float?
+  OBSERVACOES_SPC_SERASA          String?   @db.NVarChar(Max)
+  CREDIARIO                       String?   @db.NVarChar(10)
+  NOME_REPRESENTANTE              String?   @db.NVarChar(255)
+
+  @@id([EMPRESA, cli_codigo], map: "PK_Stage_Clientes")
+  @@index([COD_ATUALIZACAO], map: "IX_Stage_Clientes_codAtual")
+}
+
+model Stage_ContasPagar {
+  EMPRESA              Int       @db.SmallInt
+  LANCTO               Int
+  DOCUMENTO            String?   @db.VarChar(20)
+  FOR_CODIGO           Int?
+  EMISSAO              DateTime? @db.Date
+  VENCIMENTO           DateTime? @db.Date
+  VALOR                Float?
+  JURO_DIARIO          Float?
+  HISTORICO            String?   @db.VarChar(150)
+  DATA_PAGTO           DateTime? @db.Date
+  VALOR_PAGO           Float?
+  JURO_DESCONTO        Float?
+  NFE                  Int?
+  LANCTO_VINCULADO     Int?
+  USU_CODIGO           Int?
+  FP_CODIGO            String?   @db.VarChar(3)
+  HISTORICO_PAGTO      String?   @db.VarChar(150)
+  TT_CODIGO            String?   @db.VarChar(3)
+  ORIGEM_PAGTO_PARCIAL Int?
+  ID_SESSAO_CAIXA      Int?
+  ID_SESSAO_CAIXA_LIQ  Int?
+  STATUS               Int?      @db.SmallInt
+  ID_PAGAMENTO         Int?
+  DATA_SERVIDOR        DateTime? @db.Date
+
+  @@id([EMPRESA, LANCTO], map: "PK_Stage_ContasPagar")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_ContasReceber_Titulos {
+  TITULO              String    @db.NVarChar(50)
+  PARCELA             Int
+  TT_CODIGO           String?   @db.NVarChar(20)
+  EMISSAO             DateTime  @db.Date
+  CLI_CODIGO          Int
+  VALOR               Decimal   @db.Decimal(18, 2)
+  VENCIMENTO          DateTime  @db.Date
+  VALOR_PAGO          Decimal?  @db.Decimal(18, 2)
+  DATA_PAGTO          DateTime? @db.Date
+  HISTORICO           String?   @db.NVarChar(300)
+  REP_CODIGO          Int?
+  STATUS              Int?
+  VALOR_ABATIMENTO    Decimal?  @db.Decimal(18, 2)
+  VALOR_LIQUIDO       Decimal?  @db.Decimal(18, 2)
+  cod_atualizacao     Int       @default(0, map: "DF__Stage_Con__cod_a__76619304")
+  JURO_DESCTO_COBRADO Decimal?  @db.Decimal(18, 2)
+  VALOR_LIQUIDO_PAGO  Decimal?  @db.Decimal(19, 2)
+  LANCTO              BigInt?
+
+  @@index([CLI_CODIGO, VENCIMENTO], map: "IX_CR_Cliente")
+  @@index([VENCIMENTO], map: "IX_CR_Vencimento")
+  @@index([cod_atualizacao], map: "IX_Stage_ContasReceber_codAtual")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_Fornecedores {
+  EMPRESA                       Int?      @db.SmallInt
+  FOR_CODIGO                    Int?
+  FOR_NOME                      String?   @db.VarChar(60)
+  ENDERECO                      String?   @db.VarChar(60)
+  BAIRRO                        String?   @db.VarChar(30)
+  CIDADE                        String?   @db.VarChar(30)
+  UF                            String?   @db.Char(2)
+  CEP                           String?   @db.Char(9)
+  PESSOA                        String?   @db.Char(1)
+  CPF_CNPJ                      String?   @db.VarChar(20)
+  RG_IE                         String?   @db.VarChar(20)
+  FONE                          String?   @db.VarChar(30)
+  FAX                           String?   @db.VarChar(30)
+  CELULAR                       String?   @db.VarChar(30)
+  CONTATO                       String?   @db.VarChar(30)
+  EMAIL                         String?   @db.VarChar(50)
+  DT_CADASTRO                   DateTime? @db.Date
+  REP_NOME                      String?   @db.VarChar(60)
+  REP_FONE                      String?   @db.VarChar(30)
+  NOME_FANTASIA                 String?   @db.VarChar(50)
+  GERA_CREDITO_ICMS             String?   @db.Char(1)
+  INATIVO                       String?   @db.Char(1)
+  OBS                           String?   @db.VarChar(Max)
+  NUMERO                        String?   @db.VarChar(10)
+  CID_CODIGO                    Int?
+  INCLUIR_DESPESAS_BASE_CALCULO Int?      @db.SmallInt
+  COD_REGIME_TRIBUTARIO         String?   @db.Char(1)
+  COD_ATUALIZACAO               Int?
+
+  @@unique([EMPRESA, FOR_CODIGO], map: "UX_Stage_Fornecedores_Empresa_Codigo")
+  @@index([COD_ATUALIZACAO], map: "IX_Stage_Fornecedores_CodAtualizacao")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_LanctosContabeis {
+  EMPRESA          Int?      @db.SmallInt
+  LANCTO           Int?
+  DATA_CAIXA       DateTime? @db.Date
+  DATA_COMPETENCIA DateTime? @db.Date
+  PC_CONTA         String?   @db.VarChar(15)
+  VALOR            Float?
+  OPERACAO         String?   @db.Char(1)
+  HISTORICO        String?   @db.VarChar(150)
+  LANCTO_VINCULADO Int?
+  NFS              Int?
+  NFE              Int?
+  LANCTO_RECEBER   Int?
+  LANCTO_PAGAR     Int?
+  ID_REFATURAMENTO Int?
+
+  @@index([EMPRESA, LANCTO_PAGAR], map: "IX_LanctosContabeis_LanctoPagar")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_LanctosEstoque {
+  PRO_CODIGO    Int?
+  NFE           Int?
+  NFS           Int?
+  LANCTO        BigInt?
+  PRECO_CUSTO   Float?
+  TOTAL_LIQUIDO Float?
+  DATA          DateTime? @db.Date
+  ORIGEM        String?   @db.Char(3)
+  QUANTIDADE    Decimal?  @db.Decimal(14, 4)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_MovimentoBancario {
+  EMPRESA          Int?      @db.SmallInt
+  CB_CODIGO        String?   @db.VarChar(5)
+  LANCTO           Int?
+  DATA             DateTime? @db.Date
+  VALOR            Float?
+  HISTORICO        String?   @db.VarChar(150)
+  OPERACAO         String?   @db.Char(1)
+  CHEQUE           String?   @db.VarChar(10)
+  CTB_CONTA        String?   @db.VarChar(15)
+  CTB_LANCTO       Int?
+  LANCTO_VINCULADO Int?
+  USU_CODIGO       Int?
+  NFS              Int?
+  DATA_COMP        DateTime? @db.Date
+  NOMINAL          String?   @db.VarChar(50)
+  EMISSAO          DateTime? @db.Date
+  NFE              Int?
+  ID_SESSAO_CAIXA  Int?
+  TIPO_LANCTO      Int?      @db.SmallInt
+
+  @@ignore
+}
+
+model Stage_NF_Entrada {
+  EMPRESA                  Int       @db.SmallInt
+  NFE                      Int
+  NOTA_FISCAL              Int?
+  SERIE                    String?   @db.VarChar(5)
+  FOR_CODIGO               Int?
+  DT_EMISSAO               DateTime? @db.Date
+  DT_ENTRADA               DateTime? @db.Date
+  OPF_CODIGO               String?   @db.VarChar(5)
+  BASE_ICMS                Float?
+  VALOR_ICMS               Float?
+  BASE_ICMS_SUBST          Float?
+  VALOR_ICMS_SUBST         Float?
+  FRETE                    Float?
+  SEGURO                   Float?
+  DESP_ACESSORIAS          Float?
+  TOTAL_IPI                Float?
+  TOTAL_PRODUTOS           Float?
+  DESCONTO                 Float?
+  TOTAL_NOTA               Float?
+  OBSERVACAO               String?   @db.NVarChar(Max)
+  ACRESCIMO                Float?
+  DT_CANCELAMENTO          DateTime? @db.Date
+  FRETE_EXTRA              Float?
+  MODELO_NOTA              String?   @db.Char(2)
+  ALIQ_ICMS_FRETE          Float?
+  AJUSTADA_MANUALMENTE     String?   @db.Char(1)
+  FRETE_POR_CONTA          Int?      @db.SmallInt
+  CHAVE_NFE                String?   @db.VarChar(44)
+  VALOR_COFINS             Float?
+  VALOR_PIS                Float?
+  IMPORTADA                String?   @db.Char(1)
+  STATUS                   Int?      @db.SmallInt
+  CID_CODIGO_ORIGEM_CTE    Int?
+  CID_CODIGO_DESTINO_CTE   Int?
+  OUTROS_CUSTOS            Float?
+  INDICADOR_TIPO_PAGAMENTO String?   @db.Char(1)
+  TOTAL_ICMS_DESONERADO    Float?
+  USU_CODIGO               Int?
+  BASE_IBS_CBS             Decimal?  @db.Decimal(12, 2)
+  VALOR_IBS_UF             Decimal?  @db.Decimal(12, 2)
+  VALOR_IBS_MUN            Decimal?  @db.Decimal(12, 2)
+  VALOR_CBS                Decimal?  @db.Decimal(12, 2)
+
+  @@id([EMPRESA, NFE], map: "PK_Stage_NF_Entrada")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_Orcamentos {
+  empresa          Int?
+  orcamento        Int?
+  emissao          DateTime? @db.DateTime
+  cli_codigo       Int?
+  pro_codigo       String?   @db.VarChar(50)
+  grp_descricao    String?   @db.VarChar(100)
+  subgrp_descricao String?   @db.VarChar(100)
+  quantidade       Decimal?  @db.Decimal(18, 4)
+  unitario         Decimal?  @db.Decimal(18, 4)
+  total            Decimal?  @db.Decimal(18, 2)
+  rep_codigo       Int?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_Produtos {
+  EMPRESA                         Int       @db.SmallInt
+  PRO_CODIGO                      Int
+  PRO_DESCRICAO                   String?   @db.VarChar(120)
+  UNIDADE                         String?   @db.VarChar(2)
+  CODIGO_BARRAS                   String?   @db.VarChar(14)
+  PRECO_VENDA                     Float?
+  PRECO_CUSTO                     Float?
+  CUSTO_MEDIO                     Float?
+  MARGEM_LUCRO                    Float?
+  REFERENCIA                      String?   @db.VarChar(30)
+  REF_FABRICANTE                  String?   @db.VarChar(30)
+  LOCALIZACAO                     String?   @db.VarChar(20)
+  COMISSAO                        Float?
+  DT_ULTIMA_COMPRA                DateTime? @db.Date
+  DT_ULTIMA_VENDA                 DateTime? @db.Date
+  ST_CODIGO                       String?   @db.VarChar(5)
+  TIPO                            String?   @db.Char(1)
+  IMPRIME_ETIQUETA                String    @db.Char(1)
+  PESO                            Float?
+  CALCULA_COMISSAO                String    @db.Char(1)
+  ALIQ_IPI                        Float?
+  CF_CODIGO                       String?   @db.VarChar(3)
+  APLICACOES                      Bytes?    @db.Image
+  FOR_CODIGO                      Int?
+  PRECO_ANTERIOR                  Float?
+  DT_ALTERACAO                    DateTime? @db.Date
+  DESCTO_MAXIMO                   Float?
+  INATIVO                         String    @db.Char(1)
+  DT_CADASTRO                     DateTime? @db.Date
+  PEDIR_SUBTOTAL                  String    @db.Char(1)
+  DESC_RESUMIDA                   String?   @db.VarChar(16)
+  PEDIR_DESCRICAO                 String    @db.Char(1)
+  REF_FORNECEDOR                  String?   @db.VarChar(30)
+  PRECO1                          Float?
+  PRECO2                          Float?
+  PRECO3                          Float?
+  PRECO4                          Float?
+  PRECO5                          Float?
+  PRECO6                          Float?
+  PRECO7                          Float?
+  PRECO8                          Float?
+  PRECO9                          Float?
+  PRECO10                         Float?
+  PRECO_ANT1                      Float?
+  PRECO_ANT2                      Float?
+  PRECO_ANT3                      Float?
+  PRECO_ANT4                      Float?
+  PRECO_ANT5                      Float?
+  PRECO_ANT6                      Float?
+  PRECO_ANT7                      Float?
+  PRECO_ANT8                      Float?
+  PRECO_ANT9                      Float?
+  PRECO_ANT10                     Float?
+  CUSTO_FABRICA                   Float?
+  CUSTO_NOTA                      Float?
+  CUSTO_FIXO                      Float?
+  CUSTO_FABRICA_ANT               Float?
+  CUSTO_NOTA_ANT                  Float?
+  PRECO_CUSTO_ANT                 Float?
+  CUSTO_MEDIO_ANT                 Float?
+  FOR_CODIGO2                     Int?
+  FOR_CODIGO3                     Int?
+  GRA_CODIGO                      Int?
+  GL_CODIGO                       Int?
+  GC_CODIGO                       Int?
+  GRADE_LIN_COL                   String?   @db.VarChar(41)
+  PRO_MESTRE                      Int?
+  GRA_PRECOS                      String?   @db.Char(1)
+  GRA_OUTROS                      String?   @db.Char(1)
+  NCM                             String?   @db.VarChar(8)
+  COD_SERV_NFE                    String?   @db.VarChar(4)
+  MAR_CODIGO                      Int?
+  SUBTIPO                         String    @db.Char(2)
+  PIS_CODIGO                      String?   @db.VarChar(5)
+  COFINS_CODIGO                   String?   @db.VarChar(5)
+  USU_CODIGO                      Int
+  COD_ATUALIZACAO                 Int
+  CONTROLA_LOTE                   String    @db.Char(1)
+  CUSTO_TEMP                      Float?
+  COMERCIALIZAVEL                 String    @db.Char(1)
+  CST_IPI                         String?   @db.Char(2)
+  PESO_LIQUIDO                    Float?
+  CODIGO_RAPIDO_BALANCA           Int?
+  ANP_CODIGO                      Int?
+  TIPO_LOTE                       String?   @db.Char(3)
+  ESTOCAVEL                       String    @db.Char(1)
+  UNIDADE_TRIBUTAVEL              String?   @db.VarChar(2)
+  FATOR_UNIDADE_TRIBUTAVEL        Decimal   @db.Decimal(18, 10)
+  SUBSTITUIR_UNIDADE_SPED         String    @db.Char(1)
+  CODIGO_BARRAS_TRIBUTAVEL        String?   @db.VarChar(14)
+  CODIGO_SERVICO_MUNICIPAL        String?   @db.VarChar(20)
+  SUBGRP_CODIGO                   Int?
+  DIAS_VALIDADE                   Int?
+  ESTOQUE_DISPONIVEL              Decimal   @db.Decimal(18, 4)
+  ESTOQUE_RESERVADO               Decimal   @db.Decimal(18, 4)
+  ESTOQUE_FORA_ESTABELECIMENTO    Decimal   @db.Decimal(18, 4)
+  ESTOQUE_EM_TERCEIROS            Decimal   @db.Decimal(18, 4)
+  ESTOQUE_MINIMO                  Decimal   @db.Decimal(18, 4)
+  ESTOQUE_MAXIMO                  Decimal   @db.Decimal(18, 4)
+  CEST                            String?   @db.VarChar(7)
+  EH_PRODUTO_BALANCA              String    @db.Char(1)
+  EH_RATEAR_CUSTO_RECLASSIFICACAO String    @db.Char(1)
+  TIPO_RECLASSIFICACAO            Int       @db.SmallInt
+  RECLASSIFICACAO_QTDE_PERCENTUAL Int?      @db.SmallInt
+  PERCENTUAL_GLP                  Decimal?  @db.Decimal(18, 4)
+  PERCENTUAL_GNN                  Decimal?  @db.Decimal(18, 4)
+  PERCENTUAL_GNI                  Decimal?  @db.Decimal(18, 4)
+  CUSTO_UNITARIO_MAO_DE_OBRA      Float?
+  CUSTO_UNITARIO_OUTROS           Float?
+  BLOQUEAR_VENDA                  String    @db.Char(1)
+  SOMENTE_NFE                     String    @db.Char(1)
+  SOMENTE_CLIENTE_CADASTRADO      String    @db.Char(1)
+  USAR_DESCR_COMPLEM_NO_ITEM      String    @db.Char(1)
+  MONOFASICO_ZK                   String?   @db.Char(1)
+  EH_DESONERAR_ICMS               String    @db.Char(1)
+  IMPRESSORA_ESTOQUISTA_ID        Int?
+  ST_CODIGO_IMPORTACAO            String?   @db.VarChar(5)
+  SUGESTAO_VENDA                  String?   @db.Text
+  CODIGO_MEDICAMENTO_ANVISA       String?   @db.VarChar(13)
+  MOTIVO_ISENCAO_MEDICAMENTO      String?   @db.VarChar(255)
+  LISTAR_SUGESTAO_COMPRA          String    @db.Char(1)
+  CNAE                            String?   @db.Char(7)
+  CODIGO_CLASSIFICACAO_TRIBUTARIA String?   @db.VarChar(6)
+  CODIGO_NBS                      String?   @db.VarChar(9)
+  ST_CODIGO_IBSCBS                String?   @db.VarChar(5)
+  FAIXA_CUSTO                     String?   @db.VarChar(5)
+  MIX_CUSTO                       Int?      @db.TinyInt
+  FAIXA_MIX                       String?   @db.Char(1)
+  EH_ITEM_LC224                   String?   @db.Char(1)
+
+  @@index([COD_ATUALIZACAO], map: "IX_Stage_Produtos_CodAtualizacao")
+  @@ignore
+}
+
+model Stage_Produtos_Fornecedor_NFE {
+  EMPRESA              Int     @db.SmallInt
+  FOR_CODIGO           Int
+  COD_PROD_FORNECEDOR  String  @db.VarChar(60)
+  UM_FORNECEDOR        String  @db.VarChar(6)
+  PRO_CODIGO           Int
+  UM_SIGLA             String  @db.VarChar(2)
+  FATOR_CONVERSAO      Decimal @db.Decimal(15, 10)
+  DESC_PROD_FORNECEDOR String  @db.VarChar(120)
+  CST_CSOSN_NOTA       String? @db.VarChar(3)
+  CFOP_NOTA            String? @db.Char(5)
+  CFOP_INTERNO         String? @db.Char(5)
+  CST_INTERNO          String? @db.VarChar(4)
+
+  @@unique([EMPRESA, FOR_CODIGO, COD_PROD_FORNECEDOR, UM_FORNECEDOR, DESC_PROD_FORNECEDOR], map: "UX_Stage_Produtos_Fornecedor_NFE")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_ProdutosGrupos {
+  EMPRESA         Int?    @db.SmallInt
+  GRP_CODIGO      Int?
+  GRP_DESCRICAO   String? @db.VarChar(50)
+  COMISSAO        Float?
+  COD_ATUALIZACAO Int?
+  DESCTO_MAXIMO   Float?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model Stage_ProdutosSubgrupos {
+  EMPRESA          Int?
+  GRP_CODIGO       Int?
+  SUBGRP_CODIGO    Int?
+  SUBGRP_DESCRICAO String? @db.VarChar(100)
+  COMISSAO         Float?
+  COD_ATUALIZACAO  Int?
+  DESCTO_MAXIMO    Float?
+
+  @@ignore
+}
+
+model Stage_Vendas {
+  empresa               Int
+  nfs                   Int
+  nota_fiscal           String?   @db.VarChar(50)
+  serie                 String?   @db.VarChar(10)
+  chave_nfe             String?   @db.VarChar(50)
+  dt_emissao            DateTime? @db.DateTime
+  opf_codigo            Int?
+  opf_descricao         String?   @db.VarChar(255)
+  cli_codigo            Int?
+  cli_nome              String?   @db.VarChar(255)
+  uf                    String?   @db.Char(2)
+  cidade                String?   @db.VarChar(100)
+  indicador_presenca    Int?
+  base_icms             Decimal?  @db.Decimal(18, 2)
+  valor_icms            Decimal?  @db.Decimal(18, 2)
+  total_produtos        Decimal?  @db.Decimal(18, 2)
+  valor_descto          Decimal?  @db.Decimal(18, 2)
+  total_nota            Decimal?  @db.Decimal(18, 2)
+  grp_codigo            Int?
+  grp_descricao         String?   @db.VarChar(100)
+  subgrp_codigo         Int?
+  subgrp_descricao      String?   @db.VarChar(100)
+  mar_descricao         String?   @db.VarChar(100)
+  pro_codigo            Int
+  pro_descricao         String?   @db.VarChar(255)
+  ncm                   String?   @db.VarChar(20)
+  cst                   String?   @db.VarChar(10)
+  cfop                  String?   @db.VarChar(10)
+  unidade_comercial     String?   @db.VarChar(10)
+  quantidade            Decimal?  @db.Decimal(18, 4)
+  unitario              Decimal?  @db.Decimal(18, 4)
+  total                 Decimal?  @db.Decimal(18, 2)
+  desc_produto          Decimal?  @db.Decimal(18, 2)
+  qtde_devolvida        Decimal?  @db.Decimal(18, 4)
+  promocao              String?   @db.VarChar(1)
+  preco_venda           Decimal?  @db.Decimal(18, 4)
+  preco_custo           Decimal?  @db.Decimal(18, 4)
+  preco_custo_comercial Decimal?  @db.Decimal(18, 4)
+  ordem_servico         Int?
+  vendedor_nota         Int?
+  vendedor_item         Int?
+  COD_ATUALIZACAO       BigInt?
+  ITEM                  Int
+  DT_CANCELAMENTO       DateTime?
+  FAIXA_CUSTO           String?   @db.VarChar(5)
+  MIX_CUSTO             Int?      @db.TinyInt
+  FAIXA_MIX             String?   @db.Char(1)
+
+  @@id([nfs, pro_codigo, ITEM], map: "PK_Stage_Vendas", clustered: false)
+  @@index([COD_ATUALIZACAO], map: "IX_Stage_Vendas_codAtual")
+}
+
+model sysdiagrams {
+  name         String @db.NVarChar(128)
+  principal_id Int
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B618FC68ED2") @default(autoincrement())
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}

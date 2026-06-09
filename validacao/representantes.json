@@ -1,0 +1,1289 @@
+[
+  {
+    "rep_codigo": 1,
+    "nome": "CARLOS SIQUEIRA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 75,
+    "nome": "MONTAGEM - LUIZ EDUARDO FERREIRA",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 76,
+    "nome": "MONTAGEM - MANOEL",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 82,
+    "nome": "ROSANGELA DAL MORO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 92,
+    "nome": "ROSENIR P. RATAJCZYK 66-99964-6545",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 93,
+    "nome": "ELISVAN",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": true,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 94,
+    "nome": "RENATO ALGAYER 66-99645-6545",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 108,
+    "nome": "MONTAGEM - MANOEL E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 109,
+    "nome": "MONTAGEM - BRUNO E MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 110,
+    "nome": "YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 111,
+    "nome": "MONTAGEM - BRUNO E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 112,
+    "nome": "MONTAGEM - BRUNO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 113,
+    "nome": "LUCAS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 115,
+    "nome": "PETERSON RODRIGUES PEDROSO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 126,
+    "nome": "MONTAGEM - EVERSON",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 131,
+    "nome": "MONTAGEM - EVERSON E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 132,
+    "nome": "MONTAGEM - EVERSON E MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 135,
+    "nome": "ADRIANO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 138,
+    "nome": "WESLEI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": true,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 147,
+    "nome": "MONTAGEM - MATHEUS FELIPE",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 149,
+    "nome": "MONTAGEM - BRUNO E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 150,
+    "nome": "MONTAGEM - EVERSON E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 156,
+    "nome": "MONTAGEM - MANOEL E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 160,
+    "nome": "MONTAGEM - MATHEUS E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 163,
+    "nome": "ALISSON",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 164,
+    "nome": "PAULO VITOR",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": true,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 165,
+    "nome": "DAVI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 168,
+    "nome": "WELLINGTON SANTOS DE OLIVEIRA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 186,
+    "nome": "LIZANDRA PATROCINIO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 187,
+    "nome": "MONTAGEM - JOAQUIM",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 188,
+    "nome": "MONTAGEM - BRUNO E JOAQUIM",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 189,
+    "nome": "MONTAGEM - JOAQUIM E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 191,
+    "nome": "MONTAGEM - JOAQUIM E MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 192,
+    "nome": "MONTAGEM - JOAQUIM E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 198,
+    "nome": "VINICIUS NUNES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 200,
+    "nome": "FERNANDO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 218,
+    "nome": "GABRIEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 220,
+    "nome": "STEFANIY VITORIA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 223,
+    "nome": "RAQUEL NASCIMENTO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 227,
+    "nome": "LUCAS FEITOZA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 228,
+    "nome": "ITAMAR",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 229,
+    "nome": "MONTAGEM - FABIO JUNIOR",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 230,
+    "nome": "MONTAGEM - FABIO JUNIOR E MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 231,
+    "nome": "MONTAGEM - FABIO JUNIOR E BRUNO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 232,
+    "nome": "MONTAGEM - FABIO JUNIOR E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 233,
+    "nome": "MONTAGEM - FABIO JUNIOR E MATEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 234,
+    "nome": "LUIS GUSTAVO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 235,
+    "nome": "MONTAGEM - BRUNO E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 236,
+    "nome": "MONTAGEM - FABIO JUNIOR E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 238,
+    "nome": "MONTAGEM - MATHEUS E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 239,
+    "nome": "MONTAGEM - MANOEL E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 240,
+    "nome": "MONTAGEM - YURI E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 241,
+    "nome": "MONTAGEM - RICARDO S",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 242,
+    "nome": "KAUA JOSE G DA ROSA",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 243,
+    "nome": "MONTAGEM - BRUNO E KAUA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 244,
+    "nome": "MONTAGEM - FABIO JUNIOR E KAUA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 246,
+    "nome": "MONTAGEM - MANOEL E KAUA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 247,
+    "nome": "MONTAGEM - YURI E KAUA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 248,
+    "nome": "MONTAGEM - MATHEUS E KAUA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 249,
+    "nome": "MONTAGEM - CARLOS WESLEY DOS SANTOS DE OLIVEIRA",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 250,
+    "nome": "MONTAGEM - CARLOS WESLEY E BRUNO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 251,
+    "nome": "MONTAGEM - CARLOS WESLEY E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 253,
+    "nome": "MONTAGEM - CARLOS WESLEY E MANUEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 254,
+    "nome": "MONTAGEM - CARLOS WESLEY E MATHEUS",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 255,
+    "nome": "MONTAGEM - CARLOS WESLEY E FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 256,
+    "nome": "MONTAGEM - CARLOS WESLEY E RICARDO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 257,
+    "nome": "JEORGE MAICON AZEVEDO DO NACIMENTO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 258,
+    "nome": "JEORGE MAICON BRUNO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 259,
+    "nome": "JEORGE MAICON YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 260,
+    "nome": "JEORGE MAICON MANUEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 261,
+    "nome": "JEORGE MAICON MATHUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 262,
+    "nome": "JEORGE MAICON GUSTAVO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 263,
+    "nome": "JEORGE MAICON FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 264,
+    "nome": "MONTAGEM - VITOR VIEIRA DOS SANTOS",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 266,
+    "nome": "VITOR E  BRUNO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 267,
+    "nome": "VITOR E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 268,
+    "nome": "VITOR E MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 269,
+    "nome": "VITOR E FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 270,
+    "nome": "VITOR E RICARDO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 271,
+    "nome": "VITOR E CARLOS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 272,
+    "nome": "VITOR E KAUN",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 273,
+    "nome": "MONTAGEM - JHAYMES GUSTAVO OLIVEIRA ANDRADE",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 274,
+    "nome": "JHAYMES E BRUNO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 275,
+    "nome": "JHAYMES E YURI",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 276,
+    "nome": "JHAYMES E GUSTAVO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 277,
+    "nome": "JHAYMES E RICARDO S",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 278,
+    "nome": "JHAYMES E CARLOS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 279,
+    "nome": "JHAYMES E KAUAN",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 280,
+    "nome": "JHAYMES E MANUEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 281,
+    "nome": "JHAYMES E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 282,
+    "nome": "VITOR E MATHEUS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 283,
+    "nome": "MONTAGEM - JHAYMES E VITOR",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 284,
+    "nome": "GUSTAVO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 285,
+    "nome": "MONTAGEM - MATHEUS BATISTA DE ALMEIDA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 286,
+    "nome": "JHAYMES E FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 287,
+    "nome": "MONTAGEM - CARLOS WESLEY E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 288,
+    "nome": "MONTAGEM - FABIO JUNIOR E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 289,
+    "nome": "MONTAGEM - BRUNO E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 290,
+    "nome": "MONTAGEM - JOAQUIM E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 291,
+    "nome": "MONTAGEM - MANOEL E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 292,
+    "nome": "MONTAGEM - KAUA E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 293,
+    "nome": "MONTAGEM - MATHEUS E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 294,
+    "nome": "MONTAGEM - RICARDO S. E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 295,
+    "nome": "MONTAGEM - YURI E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 296,
+    "nome": "TAMIRES GOMES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 297,
+    "nome": "MONTAGEM - EVERSON E FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 298,
+    "nome": "MONTAGEM - EVERSON E JHAMES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 299,
+    "nome": "MONTAGEM - EVERSON E VITOR VIEIRA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 300,
+    "nome": "ANA GARCIA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 301,
+    "nome": "MONTAGEM - ALISSON MACEDO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 302,
+    "nome": "ALISSON MACEDO MANOEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 303,
+    "nome": "ALISSON MACEDO FABIO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 304,
+    "nome": "ALISSON MACEDO LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 305,
+    "nome": "ALISSON MACEDO JHAYMES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 306,
+    "nome": "ALISSON MACEDO VITOR",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 307,
+    "nome": "ALISSON MACEDO EVERSON",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 308,
+    "nome": "JHAYMES E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 309,
+    "nome": "JOSE MARIA DOS SANTOS JUNIOR",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 310,
+    "nome": "MONTAGEM - FABIO JUNIOR",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 311,
+    "nome": "MONTAGEM - VITOR E LUIZ",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 312,
+    "nome": "EMILLY LAND",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 313,
+    "nome": "MARCIEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 314,
+    "nome": "MONTAGEM - ALEXSANDER GOMES",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 315,
+    "nome": "ISABEL",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 323,
+    "nome": "ANGELICA CRISTINA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 328,
+    "nome": "MONTAGEM - JACKSON",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 326,
+    "nome": "EDILSOM SALES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": true,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 327,
+    "nome": "GISELI CASSARO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 329,
+    "nome": "ALEX CHRISTOPHER",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 330,
+    "nome": "CAMILA SOUZA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 331,
+    "nome": "ISAAC MIRANDA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 332,
+    "nome": "MONTAGEM - EDUARDO LUCIANO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 333,
+    "nome": "MONTAGEM - PEDRO AFONSO",
+    "calcula_comissao": false,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 334,
+    "nome": "DIEGO DANTAS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 335,
+    "nome": "MONTAGEM - DANIEL GONÇALVES",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 336,
+    "nome": "WENDER RUDIGHERO",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 337,
+    "nome": "GABRIEL FELIPE",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 338,
+    "nome": "MONTAGEM - WENDESON",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "TECNICO"
+  },
+  {
+    "rep_codigo": 339,
+    "nome": "RENAN",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 340,
+    "nome": "KENEDY",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "ATACADO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 341,
+    "nome": "BRUNO MARINS",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 342,
+    "nome": "SAMUEL SILVA",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "BALCÃO",
+    "papel": "VENDEDOR"
+  },
+  {
+    "rep_codigo": 99999,
+    "nome": "BRUNO (SUPERVISOR)",
+    "calcula_comissao": true,
+    "inativo": false,
+    "especial": false,
+    "local_venda": "SERVIÇO",
+    "papel": "SUPERVISOR"
+  }
+]
