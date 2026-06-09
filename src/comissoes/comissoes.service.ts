@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebirdSource } from './firebird-source';
+import { AtacadoSource } from './atacado-source';
 import {
   ConfiguracaoCalculo,
   FaixaPercentual,
@@ -20,6 +21,16 @@ import {
   calcular,
 } from './calculo-engine';
 import {
+  CelulaAtacado,
+  ConfiguracaoAtacado,
+  FaixaMix1,
+  FaixaMix23,
+  ParametroAtacado,
+  RepresentanteAtacado,
+  ResultadoComissaoAtacado,
+  calcularAtacado,
+} from './atacado-engine';
+import {
   AbrirPeriodoDto,
   AtualizarParametroDto,
   AtualizarRepresentanteDto,
@@ -27,11 +38,13 @@ import {
   ParametroItemDto,
 } from './comissoes.dto';
 
-/** Movimento bruto lido do Firebird, mantido em memória p/ recalcular sem rebuscar. */
+/** Movimento bruto lido das origens, mantido em memória p/ recalcular sem rebuscar. */
 interface MovimentoCache {
   vendas: VendaRow[];
   servicos: ServicoRow[];
   os: OsRow[];
+  /** Células (mix x faixa) do atacado lidas do BI (vw_analise_vendas). */
+  atacado: CelulaAtacado[];
 }
 
 export interface JobCalculo {
@@ -56,6 +69,7 @@ export class ComissoesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly firebird: FirebirdSource,
+    private readonly atacado: AtacadoSource,
   ) {}
 
   /* ============================= PERÍODOS ============================== */
@@ -148,15 +162,29 @@ export class ComissoesService {
       set('Lendo OS de serviço do Firebird', 55);
       const os = await this.firebird.lerOs(dataIniYmd, dataFimYmd);
 
+      set('Lendo vendas do atacado (BI)', 60);
+      const repsAtacado = await this.listarRepsAtacado();
+      const atacadoCelulas = await this.atacado.lerCelulas(
+        dataIniYmd,
+        dataFimYmd,
+        repsAtacado,
+      );
+
       // Guarda o movimento em cache p/ permitir recalcular (ajuste de parâmetros)
-      // sem reconsultar o Firebird.
-      this.guardarCache(periodo.id, { vendas, servicos, os });
+      // sem reconsultar as origens.
+      this.guardarCache(periodo.id, { vendas, servicos, os, atacado: atacadoCelulas });
 
       set('Calculando comissões', 70);
       const resultado = calcular(vendas, servicos, os, cfg);
+      const cfgAtacado = await this.carregarConfiguracaoAtacado(
+        periodo.id,
+        periodo.dias_corridos,
+      );
+      const resultadoAtacado = calcularAtacado(atacadoCelulas, cfgAtacado);
 
       set('Gravando resultado', 85);
       await this.persistirResultado(periodo.id, resultado);
+      await this.persistirResultadoAtacado(periodo.id, resultadoAtacado);
 
       await this.prisma.$executeRaw(Prisma.sql`
         UPDATE dbo.ComissaoPeriodo
@@ -169,15 +197,20 @@ export class ComissoesService {
       job.resumo = {
         vendedores: resultado.vendedores.length,
         tecnicos: resultado.tecnicos.filter((t) => t.rep_codigo != null).length,
+        atacado: resultadoAtacado.vendedores.length,
         total_comissao_vendedores: round2(
           resultado.vendedores.reduce((s, v) => s + v.valor_comissao, 0),
         ),
         total_comissao_tecnicos: round2(
           resultado.tecnicos.reduce((s, t) => s + t.total, 0),
         ),
+        total_comissao_atacado: round2(
+          resultadoAtacado.vendedores.reduce((s, v) => s + v.valor_comissao, 0),
+        ),
         linhas_vendas: vendas.length,
         linhas_servico: servicos.length,
         linhas_os: os.length,
+        celulas_atacado: atacadoCelulas.length,
       };
       this.logger.log(
         `Cálculo do período ${periodo.id} concluído: ${JSON.stringify(job.resumo)}`,
@@ -225,20 +258,26 @@ export class ComissoesService {
       const vendas = await this.firebird.lerVendas(dataIniYmd, dataFimYmd);
       const servicos = await this.firebird.lerServicos(dataIniYmd, dataFimYmd);
       const os = await this.firebird.lerOs(dataIniYmd, dataFimYmd);
-      mov = { vendas, servicos, os };
+      const repsAtacado = await this.listarRepsAtacado();
+      const atacado = await this.atacado.lerCelulas(dataIniYmd, dataFimYmd, repsAtacado);
+      mov = { vendas, servicos, os, atacado };
       this.guardarCache(periodoId, mov);
       fonte = 'firebird';
     }
 
     const cfg = await this.carregarConfiguracao(periodoId, periodo.dias_corridos);
     const resultado = calcular(mov.vendas, mov.servicos, mov.os, cfg);
+    const cfgAtacado = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
+    const resultadoAtacado = calcularAtacado(mov.atacado, cfgAtacado);
     await this.persistirResultado(periodoId, resultado);
+    await this.persistirResultadoAtacado(periodoId, resultadoAtacado);
     await this.prisma.$executeRaw(Prisma.sql`
       UPDATE dbo.ComissaoPeriodo SET status = 'CALCULADO', data_calculo = GETDATE()
       WHERE id = ${periodoId}`);
 
     const r = await this.consultarResultado(periodoId);
-    return { ...r, fonte };
+    const atacadoRes = await this.consultarResultadoAtacado(periodoId);
+    return { ...r, atacado: atacadoRes, fonte };
   }
 
   /** Carrega config + parâmetros + cadastro para o engine. */
@@ -525,6 +564,151 @@ export class ComissoesService {
   async listarTiposProduto() {
     return this.prisma.$queryRaw`
       SELECT pro_codigo, tipo, descricao FROM dbo.ComissaoTipoProduto ORDER BY tipo, pro_codigo`;
+  }
+
+  /* ============================== ATACADO ============================== */
+
+  /** Códigos dos representantes de atacado ativos (local_venda='ATACADO'). */
+  private async listarRepsAtacado(): Promise<number[]> {
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT rep_codigo FROM dbo.ComissaoRepresentante
+      WHERE local_venda = 'ATACADO' AND inativo = 0`);
+    return rows.map((r) => Number(r.rep_codigo)).filter((n) => Number.isInteger(n));
+  }
+
+  /** Faixas (mix23/mix1), meta, cadastro e parâmetros do atacado. */
+  private async carregarConfiguracaoAtacado(
+    periodoId: number,
+    diasCorridos: number,
+  ): Promise<ConfiguracaoAtacado> {
+    const repsRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT rep_codigo, nome, inativo
+      FROM dbo.ComissaoRepresentante WHERE local_venda = 'ATACADO'`);
+    const representantes = new Map<number, RepresentanteAtacado>();
+    for (const r of repsRows) {
+      representantes.set(Number(r.rep_codigo), {
+        rep_codigo: Number(r.rep_codigo),
+        nome: r.nome ?? null,
+        inativo: !!r.inativo,
+      });
+    }
+
+    const mix23Rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT valor_min, valor_max, percentual
+      FROM dbo.ComissaoAtacadoFaixaMix23 WHERE ativo = 1 ORDER BY valor_max`);
+    const faixasMix23: FaixaMix23[] = mix23Rows.map((f) => ({
+      valor_min: Number(f.valor_min),
+      valor_max: Number(f.valor_max),
+      percentual: Number(f.percentual),
+    }));
+
+    const mix1Rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT faixa, atingiu_meta, percentual
+      FROM dbo.ComissaoAtacadoFaixaMix1 WHERE ativo = 1`);
+    const faixasMix1: FaixaMix1[] = mix1Rows.map((f) => ({
+      faixa: String(f.faixa ?? '').trim().toUpperCase(),
+      atingiu_meta: !!f.atingiu_meta,
+      percentual: Number(f.percentual),
+    }));
+
+    const metaRows = await this.prisma.$queryRaw<any[]>(
+      Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
+    );
+    const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : 0.3;
+
+    const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT rep_codigo, abatimento, tem_ferias, dias_ferias
+      FROM dbo.ComissaoParametroManual WHERE periodo_id = ${periodoId}`);
+    const parametros = new Map<number, ParametroAtacado>();
+    for (const p of paramRows) {
+      parametros.set(Number(p.rep_codigo), {
+        rep_codigo: Number(p.rep_codigo),
+        abatimento: Number(p.abatimento),
+        tem_ferias: !!p.tem_ferias,
+        dias_ferias: Number(p.dias_ferias),
+      });
+    }
+
+    return { faixasMix23, faixasMix1, metaMix1, representantes, parametros, diasCorridos };
+  }
+
+  /** Grava o snapshot do atacado (apaga e regrava o período). */
+  private async persistirResultadoAtacado(
+    periodoId: number,
+    r: ResultadoComissaoAtacado,
+  ): Promise<void> {
+    await this.prisma.$executeRaw(
+      Prisma.sql`DELETE FROM dbo.ComissaoAtacadoDetalhe WHERE periodo_id = ${periodoId}`,
+    );
+    await this.prisma.$executeRaw(
+      Prisma.sql`DELETE FROM dbo.ComissaoResultadoAtacado WHERE periodo_id = ${periodoId}`,
+    );
+
+    for (const v of r.vendedores) {
+      await this.prisma.$executeRaw(Prisma.sql`
+        INSERT INTO dbo.ComissaoResultadoAtacado
+          (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1, atingiu_meta,
+           abatimento, base_real, dias_ferias, media_ferias, total_faixa, pct_mix23,
+           comissao_bruta, fator_abatimento, valor_comissao)
+        VALUES
+          (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
+           ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
+           ${round2(v.abatimento)}, ${round2(v.base_real)}, ${v.dias_ferias},
+           ${round2(v.media_ferias)}, ${round2(v.total_faixa)}, ${round6(v.pct_mix23)},
+           ${round2(v.comissao_bruta)}, ${round6(v.fator_abatimento)}, ${round2(v.valor_comissao)})`);
+    }
+
+    type Det = (string | number)[];
+    const dets: Det[] = r.detalhe.map((d) => [
+      periodoId, d.rep_codigo, d.mix, d.faixa, round2(d.valor_vendido),
+      round6(d.pct_comissao), round2(d.valor_comissao),
+    ]);
+    const COLS = Prisma.sql`(periodo_id, rep_codigo, mix, faixa, valor_vendido, pct_comissao, valor_comissao)`;
+    const LOTE = 100;
+    for (let i = 0; i < dets.length; i += LOTE) {
+      const fatia = dets.slice(i, i + LOTE);
+      const tuplas = fatia.map((m) => Prisma.sql`(${Prisma.join(m)})`);
+      await this.prisma.$executeRaw(Prisma.sql`
+        INSERT INTO dbo.ComissaoAtacadoDetalhe ${COLS} VALUES ${Prisma.join(tuplas)}`);
+    }
+  }
+
+  /** Snapshot calculado do atacado (um registro por vendedor). */
+  async consultarResultadoAtacado(periodoId: number) {
+    await this.obterPeriodo(periodoId);
+    return this.prisma.$queryRaw(Prisma.sql`
+      SELECT * FROM dbo.ComissaoResultadoAtacado
+      WHERE periodo_id = ${periodoId} ORDER BY total_vendido DESC`);
+  }
+
+  /** Relatório de assinatura do atacado: resumo + quebra mix x faixa. */
+  async relatorioAtacado(periodoId: number, repCodigo: number) {
+    await this.obterPeriodo(periodoId);
+    const resumo = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM dbo.ComissaoResultadoAtacado
+      WHERE periodo_id = ${periodoId} AND rep_codigo = ${repCodigo}`);
+    const detalhe = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT mix, faixa, valor_vendido, pct_comissao, valor_comissao
+      FROM dbo.ComissaoAtacadoDetalhe
+      WHERE periodo_id = ${periodoId} AND rep_codigo = ${repCodigo}
+      ORDER BY mix,
+        CASE faixa WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 ELSE 9 END`);
+    return { resumo: resumo[0] ?? null, detalhe };
+  }
+
+  /** Tabelas de alíquota do atacado (config editável). */
+  async listarFaixasAtacado() {
+    const mix23 = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT id, valor_min, valor_max, percentual, ativo
+      FROM dbo.ComissaoAtacadoFaixaMix23 ORDER BY valor_max`);
+    const mix1 = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT id, faixa, atingiu_meta, percentual, ativo
+      FROM dbo.ComissaoAtacadoFaixaMix1
+      ORDER BY atingiu_meta, faixa`);
+    const cfg = await this.prisma.$queryRaw<any[]>(
+      Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
+    );
+    return { mix23, mix1, meta_mix1: cfg.length ? Number(cfg[0].meta_mix1) : 0.3 };
   }
 }
 

@@ -1,0 +1,266 @@
+[
+  {
+    "rep_codigo": 163,
+    "mix": 1,
+    "faixa": "A",
+    "valor_vendido": 3483.999812
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 1,
+    "faixa": "B",
+    "valor_vendido": 13142.552480
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 1,
+    "faixa": "C",
+    "valor_vendido": 11813.304177
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 1,
+    "faixa": "D",
+    "valor_vendido": 17019.607540
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 2,
+    "faixa": "A",
+    "valor_vendido": 24262.938852
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 2,
+    "faixa": "B",
+    "valor_vendido": 11436.361007
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 2,
+    "faixa": "C",
+    "valor_vendido": 34397.287024
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 3,
+    "faixa": "A",
+    "valor_vendido": 30865.966045
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 3,
+    "faixa": "B",
+    "valor_vendido": 19993.867796
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 3,
+    "faixa": "C",
+    "valor_vendido": 20693.400000
+  },
+  {
+    "rep_codigo": 163,
+    "mix": 3,
+    "faixa": "D",
+    "valor_vendido": 10119.735264
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 1,
+    "faixa": "A",
+    "valor_vendido": 5007.950000
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 1,
+    "faixa": "B",
+    "valor_vendido": 7938.748161
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 1,
+    "faixa": "C",
+    "valor_vendido": 4210.885967
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 1,
+    "faixa": "D",
+    "valor_vendido": 9928.420000
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 2,
+    "faixa": "A",
+    "valor_vendido": 13629.538066
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 2,
+    "faixa": "B",
+    "valor_vendido": 7812.920000
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 2,
+    "faixa": "C",
+    "valor_vendido": 16914.201931
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 3,
+    "faixa": "A",
+    "valor_vendido": 22569.930000
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 3,
+    "faixa": "B",
+    "valor_vendido": 14215.110000
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 3,
+    "faixa": "C",
+    "valor_vendido": 23781.349243
+  },
+  {
+    "rep_codigo": 200,
+    "mix": 3,
+    "faixa": "D",
+    "valor_vendido": 1459.436632
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 1,
+    "faixa": "A",
+    "valor_vendido": 1365.560000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 1,
+    "faixa": "B",
+    "valor_vendido": 7470.650000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 1,
+    "faixa": "C",
+    "valor_vendido": 7482.850000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 1,
+    "faixa": "D",
+    "valor_vendido": 9607.950000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 2,
+    "faixa": "A",
+    "valor_vendido": 19368.210000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 2,
+    "faixa": "B",
+    "valor_vendido": 4114.230000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 2,
+    "faixa": "C",
+    "valor_vendido": 11259.630000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 3,
+    "faixa": "A",
+    "valor_vendido": 15245.170000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 3,
+    "faixa": "B",
+    "valor_vendido": 9666.380000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 3,
+    "faixa": "C",
+    "valor_vendido": 7319.710000
+  },
+  {
+    "rep_codigo": 218,
+    "mix": 3,
+    "faixa": "D",
+    "valor_vendido": 3758.210000
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 1,
+    "faixa": "A",
+    "valor_vendido": 379.364550
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 1,
+    "faixa": "B",
+    "valor_vendido": 1226.305094
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 1,
+    "faixa": "C",
+    "valor_vendido": 3628.378109
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 1,
+    "faixa": "D",
+    "valor_vendido": 4470.867961
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 2,
+    "faixa": "A",
+    "valor_vendido": 7983.169046
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 2,
+    "faixa": "B",
+    "valor_vendido": 5221.436420
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 2,
+    "faixa": "C",
+    "valor_vendido": 2514.916006
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 3,
+    "faixa": "A",
+    "valor_vendido": 5118.736203
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 3,
+    "faixa": "B",
+    "valor_vendido": 5997.777949
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 3,
+    "faixa": "C",
+    "valor_vendido": 4298.585699
+  },
+  {
+    "rep_codigo": 340,
+    "mix": 3,
+    "faixa": "D",
+    "valor_vendido": 1716.022962
+  }
+]

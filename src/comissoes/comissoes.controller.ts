@@ -76,6 +76,12 @@ export class ComissoesController {
     return this.service.consultarResultado(id);
   }
 
+  @Get('periodos/:id/atacado')
+  @ApiOperation({ summary: 'Comissão do atacado (mix e faixa) do período' })
+  atacado(@Param('id', ParseIntPipe) id: number) {
+    return this.service.consultarResultadoAtacado(id);
+  }
+
   /* ----------------------------- Relatórios --------------------------- */
 
   @Get('periodos/:id/relatorio/vendas/:rep')
@@ -94,6 +100,15 @@ export class ComissoesController {
     @Param('rep', ParseIntPipe) rep: number,
   ) {
     return this.service.relatorioServicos(id, rep);
+  }
+
+  @Get('periodos/:id/relatorio/atacado/:rep')
+  @ApiOperation({ summary: 'Relatório de comissão do atacado (mix x faixa, assinatura)' })
+  relatorioAtacado(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('rep', ParseIntPipe) rep: number,
+  ) {
+    return this.service.relatorioAtacado(id, rep);
   }
 
   /* ---------------------------- Parâmetros ---------------------------- */
@@ -149,5 +164,11 @@ export class ComissoesController {
   @ApiOperation({ summary: 'Mapa PRO_CODIGO → TIPO' })
   tiposProduto() {
     return this.service.listarTiposProduto();
+  }
+
+  @Get('atacado/faixas')
+  @ApiOperation({ summary: 'Tabelas de alíquota do atacado (mix 2/3, mix 1 e meta)' })
+  faixasAtacado() {
+    return this.service.listarFaixasAtacado();
   }
 }
