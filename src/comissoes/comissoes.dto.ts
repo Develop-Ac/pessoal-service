@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -90,15 +91,28 @@ export class AtualizarRepresentanteDto {
   @IsString()
   local_venda?: string;
 
-  @ApiPropertyOptional({ example: 'VENDEDOR', enum: ['VENDEDOR', 'TECNICO', 'SUPERVISOR'] })
+  @ApiPropertyOptional({ example: 'VENDEDOR', enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'] })
   @IsOptional()
-  @IsIn(['VENDEDOR', 'TECNICO', 'SUPERVISOR'])
+  @IsIn(['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'])
   papel?: string;
 
   @ApiPropertyOptional({ description: 'Inativa o representante no cálculo de comissão' })
   @IsOptional()
   @IsBoolean()
   inativo?: boolean;
+}
+
+/** Uma mudança de canal de venda do representante (histórico/vigência). */
+export class CanalHistDto {
+  @ApiProperty({ example: 'BALCÃO', enum: ['BALCÃO', 'ATACADO', 'SERVIÇO'], description: 'Canal a partir da data' })
+  @IsNotEmpty()
+  @IsIn(['BALCÃO', 'ATACADO', 'SERVIÇO'])
+  canal!: string;
+
+  @ApiProperty({ example: '2026-05-26', description: 'Data a partir da qual o canal passa a valer (YYYY-MM-DD)' })
+  @IsNotEmpty()
+  @IsString()
+  vigente_de!: string;
 }
 
 /** Uma faixa progressiva do mix 2/3 do atacado (edição). */
@@ -182,7 +196,7 @@ export class AtualizarAtacadoConfigDto {
 
 /** Filtros da listagem de representantes. */
 export class ListarRepresentantesQuery {
-  @ApiPropertyOptional({ enum: ['VENDEDOR', 'TECNICO', 'SUPERVISOR'] })
+  @ApiPropertyOptional({ enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'] })
   @IsOptional()
   @IsString()
   papel?: string;

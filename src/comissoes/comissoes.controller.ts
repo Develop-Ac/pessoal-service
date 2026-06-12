@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -15,6 +16,7 @@ import {
   AtualizarAtacadoConfigDto,
   AtualizarParametroDto,
   AtualizarRepresentanteDto,
+  CanalHistDto,
   ListarRepresentantesQuery,
   RecalcularDto,
 } from './comissoes.dto';
@@ -145,6 +147,24 @@ export class ComissoesController {
     @Body() dto: AtualizarRepresentanteDto,
   ) {
     return this.service.atualizarRepresentante(rep, dto);
+  }
+
+  @Get('representantes/:rep/canal-hist')
+  @ApiOperation({ summary: 'Histórico de mudanças de canal de venda do representante' })
+  listarCanalHist(@Param('rep', ParseIntPipe) rep: number) {
+    return this.service.listarCanalHist(rep);
+  }
+
+  @Post('representantes/:rep/canal-hist')
+  @ApiOperation({ summary: 'Adiciona uma mudança de canal (a partir de uma data)' })
+  adicionarCanalHist(@Param('rep', ParseIntPipe) rep: number, @Body() dto: CanalHistDto) {
+    return this.service.adicionarCanalHist(rep, dto);
+  }
+
+  @Delete('representantes/canal-hist/:id')
+  @ApiOperation({ summary: 'Remove uma mudança de canal pelo id' })
+  removerCanalHist(@Param('id', ParseIntPipe) id: number) {
+    return this.service.removerCanalHist(id);
   }
 
   @Post('representantes/sincronizar')

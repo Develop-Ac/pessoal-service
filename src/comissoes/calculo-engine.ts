@@ -70,7 +70,7 @@ export interface Representante {
   inativo: boolean;
   especial: boolean;
   local_venda: string | null;
-  papel: string | null; // VENDEDOR | TECNICO | SUPERVISOR
+  papel: string | null; // VENDEDOR | VENDEDOR_ATACADO | TECNICO | SUPERVISOR
 }
 
 /** Faixa de % (aba TABELA %). */
@@ -342,8 +342,11 @@ export function agregarVendedores(
     // Entra no bloco quem é VENDEDOR no cadastro, não está inativo e teve venda.
     // (NÃO gatilha por calcula_comissao: na prática vendedores/montadores recebem
     //  independentemente dessa flag do ERP — quem manda é o papel do cadastro.)
+    // VENDEDOR_ATACADO é um rótulo de classificação; para o cálculo conta como
+    // VENDEDOR (a comissão de atacado é apurada à parte, por vw_analise_vendas).
     if (!rep || rep.inativo) continue;
-    if ((rep.papel ?? '').toUpperCase() !== 'VENDEDOR') continue;
+    const papelV = (rep.papel ?? '').toUpperCase();
+    if (papelV !== 'VENDEDOR' && papelV !== 'VENDEDOR_ATACADO') continue;
 
     const vendasV = acc.tipos.get(TIPO_VENDAS) ?? 0;
     const devolucao = acc.tipos.get(TIPO_DEVOLUCAO) ?? 0;

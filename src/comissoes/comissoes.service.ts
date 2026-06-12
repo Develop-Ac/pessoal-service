@@ -519,6 +519,33 @@ export class ComissoesService {
     return { ok: true };
   }
 
+  /* ===== Histórico de canal de venda do representante (vigência) ===== */
+
+  /** Lista as mudanças de canal de um representante (mais recente primeiro). */
+  async listarCanalHist(repCodigo: number) {
+    return this.prisma.$queryRaw(Prisma.sql`
+      SELECT id, rep_codigo, canal, CONVERT(varchar(10), vigente_de, 23) AS vigente_de
+      FROM dbo.ComissaoRepresentanteCanal
+      WHERE rep_codigo = ${repCodigo}
+      ORDER BY vigente_de DESC, id DESC`);
+  }
+
+  /** Adiciona uma mudança de canal (a partir de uma data). */
+  async adicionarCanalHist(repCodigo: number, dto: CanalHistDto) {
+    await this.prisma.$executeRaw(Prisma.sql`
+      INSERT INTO dbo.ComissaoRepresentanteCanal (rep_codigo, canal, vigente_de)
+      VALUES (${repCodigo}, ${dto.canal}, ${dto.vigente_de})`);
+    return { ok: true };
+  }
+
+  /** Remove uma mudança de canal pelo id. */
+  async removerCanalHist(id: number) {
+    const r = await this.prisma.$executeRaw(Prisma.sql`
+      DELETE FROM dbo.ComissaoRepresentanteCanal WHERE id = ${id}`);
+    if (!r) throw new NotFoundException('Registro não encontrado.');
+    return { ok: true };
+  }
+
   /**
    * Sincroniza nome/calcula_comissao do Firebird (tabela representantes) SEM tocar
    * nas colunas mantidas manualmente (especial/local_venda/papel) NEM em `inativo`
