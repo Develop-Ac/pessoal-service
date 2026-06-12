@@ -35,6 +35,7 @@ import {
   AbrirPeriodoDto,
   AtualizarParametroDto,
   AtualizarRepresentanteDto,
+  CanalHistDto,
   ListarRepresentantesQuery,
   ParametroItemDto,
 } from './comissoes.dto';
