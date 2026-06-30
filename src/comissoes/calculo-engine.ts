@@ -345,8 +345,13 @@ export function agregarVendedores(
     // VENDEDOR_ATACADO é um rótulo de classificação; para o cálculo conta como
     // VENDEDOR (a comissão de atacado é apurada à parte, por vw_analise_vendas).
     if (!rep || rep.inativo) continue;
+    // O atacado é apurado à PARTE (vw_analise_vendas, mix x faixa) e NÃO entra no
+    // varejo — mesmo que o ERP registre vendas desse vendedor no Firebird. Filtra
+    // tanto pelo canal (local_venda='ATACADO') quanto pelo papel, para garantir
+    // que vendedor de atacado não caia no cálculo de varejo.
+    if ((rep.local_venda ?? '').toUpperCase() === 'ATACADO') continue;
     const papelV = (rep.papel ?? '').toUpperCase();
-    if (papelV !== 'VENDEDOR' && papelV !== 'VENDEDOR_ATACADO') continue;
+    if (papelV !== 'VENDEDOR') continue;
 
     const vendasV = acc.tipos.get(TIPO_VENDAS) ?? 0;
     const devolucao = acc.tipos.get(TIPO_DEVOLUCAO) ?? 0;
