@@ -85,6 +85,12 @@ export class ComissoesController {
     return this.service.consultarResultadoAtacado(id);
   }
 
+  @Get('periodos/:id/supervisor-atacado')
+  @ApiOperation({ summary: 'Comissão do supervisor do atacado (todo o canal) do período' })
+  supervisorAtacado(@Param('id', ParseIntPipe) id: number) {
+    return this.service.consultarResultadoSupervisorAtacado(id);
+  }
+
   /* ----------------------------- Relatórios --------------------------- */
 
   @Get('periodos/:id/relatorio/vendas/:rep')
@@ -112,6 +118,14 @@ export class ComissoesController {
     @Param('rep', ParseIntPipe) rep: number,
   ) {
     return this.service.relatorioAtacado(id, rep);
+  }
+
+  @Get('periodos/:id/relatorio/supervisor-atacado')
+  @ApiOperation({
+    summary: 'Relatório de comissão do supervisor do atacado (todo o canal, assinatura)',
+  })
+  relatorioSupervisorAtacado(@Param('id', ParseIntPipe) id: number) {
+    return this.service.relatorioSupervisorAtacado(id);
   }
 
   /* ---------------------------- Parâmetros ---------------------------- */

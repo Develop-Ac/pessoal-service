@@ -104,4 +104,46 @@ export class AtacadoSource {
       faixa: String(r.faixa ?? '').trim().toUpperCase(),
     }));
   }
+
+  /**
+   * Relação de vendas por item de TODO o canal de atacado no período (espelha a
+   * 447 — base do supervisor). Restringe aos reps de atacado informados (decisão:
+   * a base do supervisor é o canal de atacado, não a view inteira). Mesmas regras
+   * de mix/faixa não nulos; ordenado por data desc, cliente, produto.
+   */
+  async lerItensCanal(
+    dataIni: string,
+    dataFim: string,
+    repsAtacado: number[],
+  ): Promise<ItemAtacadoRow[]> {
+    if (!repsAtacado.length) return [];
+    const inList = Prisma.join(repsAtacado.map((r) => Prisma.sql`${r}`));
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT
+        CONVERT(varchar(10), v.dt_emissao_convertida, 23) AS dt_emissao,
+        v.cli_codigo,
+        v.cli_nome,
+        v.pro_codigo,
+        v.pro_descricao,
+        v.liquido_produto,
+        v.mix_custo  AS mix,
+        v.faixa_mix  AS faixa
+      FROM dbo.vw_analise_vendas v
+      WHERE v.dt_emissao_convertida BETWEEN ${dataIni} AND ${dataFim}
+        AND v.mix_custo IS NOT NULL
+        AND v.faixa_mix IS NOT NULL
+        AND v.vendedor_venda IN (${inList})
+      ORDER BY v.dt_emissao_convertida DESC, v.cli_nome, v.pro_descricao`);
+
+    return rows.map((r) => ({
+      dt_emissao: r.dt_emissao ?? null,
+      cli_codigo: r.cli_codigo == null ? null : Number(r.cli_codigo),
+      cli_nome: r.cli_nome ?? null,
+      pro_codigo: r.pro_codigo == null ? null : Number(r.pro_codigo),
+      pro_descricao: r.pro_descricao ?? null,
+      liquido_produto: Number(r.liquido_produto),
+      mix: Number(r.mix),
+      faixa: String(r.faixa ?? '').trim().toUpperCase(),
+    }));
+  }
 }

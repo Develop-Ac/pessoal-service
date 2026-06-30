@@ -32,6 +32,11 @@ import {
   percentualMix1,
 } from './atacado-engine';
 import {
+  ResultadoSupervisorAtacado,
+  calcularSupervisorAtacado,
+  pctSupervisorAtacado,
+} from './supervisor-atacado-engine';
+import {
   AbrirPeriodoDto,
   AtualizarParametroDto,
   AtualizarRepresentanteDto,
@@ -183,10 +188,15 @@ export class ComissoesService {
         periodo.dias_corridos,
       );
       const resultadoAtacado = calcularAtacado(atacadoCelulas, cfgAtacado);
+      const resultadoSupervisor = await this.calcularSupervisorAtacado(
+        periodo.id,
+        atacadoCelulas,
+      );
 
       set('Gravando resultado', 85);
       await this.persistirResultado(periodo.id, resultado);
       await this.persistirResultadoAtacado(periodo.id, resultadoAtacado);
+      await this.persistirResultadoSupervisorAtacado(periodo.id, resultadoSupervisor);
 
       await this.prisma.$executeRaw(Prisma.sql`
         UPDATE dbo.ComissaoPeriodo
@@ -208,6 +218,9 @@ export class ComissoesService {
         ),
         total_comissao_atacado: round2(
           resultadoAtacado.vendedores.reduce((s, v) => s + v.valor_comissao, 0),
+        ),
+        total_comissao_supervisor_atacado: round2(
+          resultadoSupervisor?.resumo.comissao_total ?? 0,
         ),
         linhas_vendas: vendas.length,
         linhas_servico: servicos.length,
@@ -271,15 +284,21 @@ export class ComissoesService {
     const resultado = calcular(mov.vendas, mov.servicos, mov.os, cfg);
     const cfgAtacado = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
     const resultadoAtacado = calcularAtacado(mov.atacado, cfgAtacado);
+    const resultadoSupervisor = await this.calcularSupervisorAtacado(
+      periodoId,
+      mov.atacado,
+    );
     await this.persistirResultado(periodoId, resultado);
     await this.persistirResultadoAtacado(periodoId, resultadoAtacado);
+    await this.persistirResultadoSupervisorAtacado(periodoId, resultadoSupervisor);
     await this.prisma.$executeRaw(Prisma.sql`
       UPDATE dbo.ComissaoPeriodo SET status = 'CALCULADO', data_calculo = GETDATE()
       WHERE id = ${periodoId}`);
 
     const r = await this.consultarResultado(periodoId);
     const atacadoRes = await this.consultarResultadoAtacado(periodoId);
-    return { ...r, atacado: atacadoRes, fonte };
+    const supervisorRes = await this.consultarResultadoSupervisorAtacado(periodoId);
+    return { ...r, atacado: atacadoRes, supervisor_atacado: supervisorRes, fonte };
   }
 
   /** Carrega config + parâmetros + cadastro para o engine. */
@@ -757,6 +776,149 @@ export class ComissoesService {
         };
       });
     }
+
+    return { resumo, detalhe, itens };
+  }
+
+  /* ======================= SUPERVISOR DO ATACADO ====================== */
+
+  /** Cadastro do supervisor do atacado (papel='SUPERVISOR_ATACADO', ativo). */
+  private async obterSupervisorAtacadoRep(): Promise<{
+    rep_codigo: number;
+    nome: string | null;
+  } | null> {
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT TOP 1 rep_codigo, nome
+      FROM dbo.ComissaoRepresentante
+      WHERE papel = 'SUPERVISOR_ATACADO' AND inativo = 0
+      ORDER BY rep_codigo`);
+    if (!rows.length) return null;
+    return { rep_codigo: Number(rows[0].rep_codigo), nome: rows[0].nome ?? null };
+  }
+
+  /**
+   * Calcula a comissão do supervisor do atacado sobre TODO o canal (soma das
+   * células já lidas para os vendedores). Devolve null se não houver supervisor
+   * cadastrado. A meta de participação reusa a config do atacado (default 0,30).
+   */
+  private async calcularSupervisorAtacado(
+    periodoId: number,
+    celulas: CelulaAtacado[],
+  ): Promise<ResultadoSupervisorAtacado | null> {
+    const rep = await this.obterSupervisorAtacadoRep();
+    if (!rep) return null;
+    const metaRows = await this.prisma.$queryRaw<any[]>(
+      Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
+    );
+    const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : undefined;
+    return calcularSupervisorAtacado(celulas, rep, metaMix1);
+  }
+
+  /** Grava o snapshot do supervisor do atacado (apaga e regrava o período). */
+  private async persistirResultadoSupervisorAtacado(
+    periodoId: number,
+    r: ResultadoSupervisorAtacado | null,
+  ): Promise<void> {
+    await this.prisma.$executeRaw(
+      Prisma.sql`DELETE FROM dbo.ComissaoSupervisorAtacadoDetalhe WHERE periodo_id = ${periodoId}`,
+    );
+    await this.prisma.$executeRaw(
+      Prisma.sql`DELETE FROM dbo.ComissaoResultadoSupervisorAtacado WHERE periodo_id = ${periodoId}`,
+    );
+    if (!r) return;
+
+    const v = r.resumo;
+    await this.prisma.$executeRaw(Prisma.sql`
+      INSERT INTO dbo.ComissaoResultadoSupervisorAtacado
+        (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1,
+         atingiu_meta, pct_mix23, comissao_total)
+      VALUES
+        (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
+         ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
+         ${round6(v.pct_mix23)}, ${round2(v.comissao_total)})`);
+
+    type Det = (string | number)[];
+    const dets: Det[] = r.detalhe.map((d) => [
+      periodoId, d.mix, d.faixa, round2(d.valor_vendido),
+      round6(d.pct_comissao), round2(d.valor_comissao),
+    ]);
+    const COLS = Prisma.sql`(periodo_id, mix, faixa, valor_vendido, pct_comissao, valor_comissao)`;
+    const LOTE = 100;
+    for (let i = 0; i < dets.length; i += LOTE) {
+      const fatia = dets.slice(i, i + LOTE);
+      const tuplas = fatia.map((m) => Prisma.sql`(${Prisma.join(m)})`);
+      await this.prisma.$executeRaw(Prisma.sql`
+        INSERT INTO dbo.ComissaoSupervisorAtacadoDetalhe ${COLS} VALUES ${Prisma.join(tuplas)}`);
+    }
+  }
+
+  /** Snapshot calculado do supervisor do atacado (um registro por período). */
+  async consultarResultadoSupervisorAtacado(periodoId: number) {
+    await this.obterPeriodo(periodoId);
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM dbo.ComissaoResultadoSupervisorAtacado
+      WHERE periodo_id = ${periodoId}`);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Relatório de assinatura do supervisor do atacado: resumo + quebra mix x faixa
+   * + relação de vendas por item de TODO o canal (espelha a 447). Devolve o mesmo
+   * formato do relatório do vendedor de atacado para reaproveitar a tela/impressão
+   * (campos de abatimento/férias zerados — o supervisor não os tem).
+   */
+  async relatorioSupervisorAtacado(periodoId: number) {
+    const periodo = await this.obterPeriodo(periodoId);
+    const resumoRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM dbo.ComissaoResultadoSupervisorAtacado WHERE periodo_id = ${periodoId}`);
+    const s = resumoRows[0] ?? null;
+    if (!s) return { resumo: null, detalhe: [], itens: [] };
+
+    // Espelha a forma do ResultadoAtacado consumido pela tela/impressão.
+    const resumo = {
+      rep_codigo: Number(s.rep_codigo),
+      nome: s.nome ?? null,
+      total_vendido: Number(s.total_vendido),
+      total_mix1: Number(s.total_mix1),
+      pct_mix1: Number(s.pct_mix1),
+      atingiu_meta: !!s.atingiu_meta,
+      abatimento: 0,
+      base_real: Number(s.total_vendido),
+      dias_ferias: 0,
+      media_ferias: 0,
+      total_faixa: Number(s.total_vendido),
+      pct_mix23: Number(s.pct_mix23),
+      comissao_bruta: Number(s.comissao_total),
+      fator_abatimento: 1,
+      valor_comissao: Number(s.comissao_total),
+    };
+
+    const detalhe = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT mix, faixa, valor_vendido, pct_comissao, valor_comissao
+      FROM dbo.ComissaoSupervisorAtacadoDetalhe
+      WHERE periodo_id = ${periodoId}
+      ORDER BY mix,
+        CASE faixa WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 ELSE 9 END`);
+
+    const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
+    const repsAtacado = await this.listarRepsAtacado();
+    const atingiuMeta = !!s.atingiu_meta;
+    const raw = await this.atacado.lerItensCanal(dataIniYmd, dataFimYmd, repsAtacado);
+    const itens = raw.map((it) => {
+      const pct = pctSupervisorAtacado(it.mix, it.faixa, atingiuMeta);
+      return {
+        dt_emissao: it.dt_emissao,
+        cli_codigo: it.cli_codigo,
+        cli_nome: it.cli_nome,
+        pro_codigo: it.pro_codigo,
+        pro_descricao: it.pro_descricao,
+        liquido_produto: round2(it.liquido_produto),
+        mix: it.mix,
+        faixa: it.faixa,
+        pct_comissao: round6(pct),
+        valor_comissao: round2(it.liquido_produto * pct),
+      };
+    });
 
     return { resumo, detalhe, itens };
   }

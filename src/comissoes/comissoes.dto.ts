@@ -91,9 +91,12 @@ export class AtualizarRepresentanteDto {
   @IsString()
   local_venda?: string;
 
-  @ApiPropertyOptional({ example: 'VENDEDOR', enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'] })
+  @ApiPropertyOptional({
+    example: 'VENDEDOR',
+    enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR', 'SUPERVISOR_ATACADO'],
+  })
   @IsOptional()
-  @IsIn(['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'])
+  @IsIn(['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR', 'SUPERVISOR_ATACADO'])
   papel?: string;
 
   @ApiPropertyOptional({ description: 'Inativa o representante no cálculo de comissão' })
@@ -196,7 +199,9 @@ export class AtualizarAtacadoConfigDto {
 
 /** Filtros da listagem de representantes. */
 export class ListarRepresentantesQuery {
-  @ApiPropertyOptional({ enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR'] })
+  @ApiPropertyOptional({
+    enum: ['VENDEDOR', 'VENDEDOR_ATACADO', 'TECNICO', 'SUPERVISOR', 'SUPERVISOR_ATACADO'],
+  })
   @IsOptional()
   @IsString()
   papel?: string;
