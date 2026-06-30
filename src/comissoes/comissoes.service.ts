@@ -457,12 +457,28 @@ export class ComissoesService {
 
   async relatorioServicos(periodoId: number, repCodigo: number) {
     await this.obterPeriodo(periodoId);
+    // O supervisor da oficina (Bruno) comissiona 0,65% sobre TODA a base de
+    // serviço — e o código dele (sentinela) não tem serviço atribuído. Então,
+    // para o supervisor, o relatório lista o serviço INTEIRO do período (sem
+    // filtrar por rep_codigo); para os demais técnicos, só o serviço deles.
+    const ehSupervisor = await this.repEhSupervisorOficina(repCodigo);
+    const filtroRep = ehSupervisor
+      ? Prisma.empty
+      : Prisma.sql`AND rep_codigo = ${repCodigo}`;
     return this.prisma.$queryRaw(Prisma.sql`
       SELECT nfs, nota_fiscal, dt_emissao, cli_nome, pro_codigo, pro_descricao,
              quantidade, unitario, total_produtos2, desconto, liquido
       FROM dbo.ComissaoMovimento
-      WHERE periodo_id = ${periodoId} AND origem = 'SERVICO' AND rep_codigo = ${repCodigo}
+      WHERE periodo_id = ${periodoId} AND origem = 'SERVICO' ${filtroRep}
       ORDER BY dt_emissao, nfs`);
+  }
+
+  /** True se o rep é o supervisor da oficina (papel='SUPERVISOR'). */
+  private async repEhSupervisorOficina(repCodigo: number): Promise<boolean> {
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT 1 AS ok FROM dbo.ComissaoRepresentante
+      WHERE rep_codigo = ${repCodigo} AND papel = 'SUPERVISOR'`);
+    return rows.length > 0;
   }
 
   /* =========================== PARÂMETROS ============================== */
