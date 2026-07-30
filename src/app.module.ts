@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthController } from './health.controller';
@@ -18,6 +20,10 @@ import { ComissoesModule } from './comissoes/comissoes.module';
     ImportacaoFolhaModule,
     RateioModule,
     ComissoesModule,
+
+    PrometheusModule.register({
+      defaultMetrics: { enabled: true }, // CPU, memória, event loop, GC
+    }),
   ],
   controllers: [HealthController],
 })
