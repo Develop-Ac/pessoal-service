@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -38,6 +39,15 @@ export class AtualizarParametroDto {
   @Type(() => Number)
   @IsNumber()
   abatimento?: number;
+
+  @ApiPropertyOptional({
+    example: 'Quebra de para-brisa na montagem (OS 12345)',
+    description: 'Motivo do abatimento (obrigatório na tela quando há abatimento)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  abatimento_motivo?: string;
 
   @ApiPropertyOptional({ description: 'Vendedor esteve de férias no período' })
   @IsOptional()

@@ -120,6 +120,7 @@ BEGIN
         periodo_id   INT            NOT NULL,
         rep_codigo   INT            NOT NULL,
         abatimento   DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComParam_abat DEFAULT (0),
+        abatimento_motivo VARCHAR(200) NULL,      -- por que a base foi reduzida
         tem_ferias   BIT            NOT NULL CONSTRAINT DF_ComParam_temfer DEFAULT (0),
         dias_ferias  INT            NOT NULL CONSTRAINT DF_ComParam_diasfer DEFAULT (0),
         pct_bonus    DECIMAL(9,6)   NOT NULL CONSTRAINT DF_ComParam_bonus DEFAULT (0),
@@ -150,6 +151,7 @@ BEGIN
         impostos        DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResV_imp DEFAULT (0),
         pintura         DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResV_pint DEFAULT (0),
         abatimento      DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResV_abat DEFAULT (0),
+        abatimento_motivo VARCHAR(200) NULL,
         media_ferias    DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResV_mf DEFAULT (0),
         dias_ferias     INT            NOT NULL CONSTRAINT DF_ComResV_df DEFAULT (0),
         base_real       DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResV_br DEFAULT (0),
@@ -181,6 +183,7 @@ BEGIN
         is_supervisor   BIT            NOT NULL CONSTRAINT DF_ComResT_sup DEFAULT (0),
         valor_base      DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResT_vb DEFAULT (0),
         abatimento      DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResT_abat DEFAULT (0),
+        abatimento_motivo VARCHAR(200) NULL,
         base_calculo    DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResT_bc DEFAULT (0),
         percentual      DECIMAL(9,6)   NOT NULL CONSTRAINT DF_ComResT_pct DEFAULT (0),
         valor_comissao  DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResT_vc DEFAULT (0),

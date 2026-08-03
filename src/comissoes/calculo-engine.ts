@@ -85,6 +85,8 @@ export interface FaixaPercentual {
 export interface ParametroManual {
   rep_codigo: number;
   abatimento: number;
+  /** Justificativa do abatimento (texto livre), carimbada no resultado. */
+  abatimento_motivo: string | null;
   tem_ferias: boolean;
   dias_ferias: number;
   pct_bonus: number;
@@ -144,6 +146,7 @@ export interface ResultadoVendedor {
   impostos: number;
   pintura: number;
   abatimento: number;
+  abatimento_motivo: string | null;
   media_ferias: number;
   dias_ferias: number;
   base_real: number;
@@ -160,6 +163,7 @@ export interface ResultadoTecnico {
   is_supervisor: boolean;
   valor_base: number;
   abatimento: number;
+  abatimento_motivo: string | null;
   base_calculo: number;
   percentual: number;
   valor_comissao: number;
@@ -185,6 +189,13 @@ function num(v: unknown): number {
 
 function vazio(v: unknown): boolean {
   return v == null || v === '' || (typeof v === 'string' && v.trim() === '');
+}
+
+/** Motivo do abatimento — só faz sentido quando há abatimento. */
+function motivo(p: { abatimento_motivo?: string | null } | undefined, abatimento: number): string | null {
+  if (!abatimento) return null;
+  const t = (p?.abatimento_motivo ?? '').trim();
+  return t === '' ? null : t;
 }
 
 /* --------------------------- Classificação TIPO ---------------------------- */
@@ -362,6 +373,7 @@ export function agregarVendedores(
 
     const p = cfg.parametros.get(cod);
     const abatimento = num(p?.abatimento);
+    const abatimento_motivo = motivo(p, abatimento);
     const diasFerias = p?.tem_ferias ? num(p?.dias_ferias) : 0;
 
     // base_real = VENDAS + DEVOLUÇÃO + MAO DE OBRA − ABATIMENTO (frete/impostos/pintura ficam de fora).
@@ -391,6 +403,7 @@ export function agregarVendedores(
       impostos,
       pintura,
       abatimento,
+      abatimento_motivo,
       media_ferias,
       dias_ferias: diasFerias,
       base_real,
@@ -477,6 +490,7 @@ export function agregarTecnicos(
     const valor_base = (baseServicoPorCod.get(cod) ?? 0) + (osPorCod.get(cod) ?? 0);
     const p = cfg.parametros.get(cod);
     const abatimento = num(p?.abatimento);
+    const abatimento_motivo = motivo(p, abatimento);
     const pct_bonus = num(p?.pct_bonus);
     const base_calculo = valor_base - abatimento;
     const valor_comissao = base_calculo * pctTecnico;
@@ -489,6 +503,7 @@ export function agregarTecnicos(
       is_supervisor: false,
       valor_base,
       abatimento,
+      abatimento_motivo,
       base_calculo,
       percentual: pctTecnico,
       valor_comissao,
@@ -515,6 +530,7 @@ export function agregarTecnicos(
       is_supervisor: true,
       valor_base: baseGeralServico,
       abatimento,
+      abatimento_motivo: motivo(p, abatimento),
       base_calculo,
       percentual: pctSupervisor,
       valor_comissao,
@@ -531,6 +547,7 @@ export function agregarTecnicos(
     is_supervisor: false,
     valor_base: baseGeralServico - somaBaseTecnicos,
     abatimento: 0,
+    abatimento_motivo: null,
     base_calculo: 0,
     percentual: 0,
     valor_comissao: 0,

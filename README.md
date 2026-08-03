@@ -65,7 +65,7 @@ internamente; o proxy reverso roteia por hostname). Swagger em `/docs` quando
 | GET | `/comissoes/jobs/:jobId` | Progresso do cálculo |
 | GET | `/comissoes/periodos/:id/resultado` | Dinâmica (vendedores + técnicos) |
 | GET | `/comissoes/periodos/:id/relatorio/{vendas\|servicos}/:rep` | Relatório sintético p/ assinatura |
-| GET/PATCH | `/comissoes/periodos/:id/parametros[/:rep]` | Abatimento, férias, %bônus por rep |
+| GET/PATCH | `/comissoes/periodos/:id/parametros[/:rep]` | Abatimento (+ motivo), férias, %bônus por rep |
 | GET/PATCH | `/comissoes/representantes[/:rep]` | Cadastro (especial/local_venda/papel) |
 | POST | `/comissoes/representantes/sincronizar` | Sincroniza nome/comissiona/inativo do Firebird |
 | GET | `/comissoes/{faixas\|tipos-produto}` | Configuração (TABELA % e PRO→TIPO) |
@@ -110,6 +110,19 @@ npm run db:pull && npm run db:generate
   (`papel` nulo); habilite caso a caso no cadastro.
 - Vendedores sem venda real (ou só devolução) aparecem para revisão; remova o
   `papel` de quem não é vendedor de fato para tirá-lo do cálculo.
+
+### Abatimento
+
+Todo bloco aceita abatimento manual por período (`ComissaoParametroManual`), com
+**motivo** obrigatório na tela — o motivo é carimbado no snapshot e sai impresso
+no demonstrativo de assinatura. Mecânica por papel:
+
+- **Vendedor (varejo)** e **técnico**: reduz a base antes do %.
+- **Gerente de serviços** (`papel = SUPERVISOR`): reduz a base do serviço antes
+  dos 0,65%.
+- **Vendedor** e **supervisor do atacado**: reduz a base do canal e escala a
+  comissão proporcionalmente (`fator = base_real / total_vendido`); não altera a
+  participação do mix 1 usada na meta.
 
 ## Comportamento da importação (igual ao sistema Python anterior)
 

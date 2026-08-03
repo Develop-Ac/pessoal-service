@@ -136,6 +136,7 @@ BEGIN
         pct_mix1         DECIMAL(9,6)   NOT NULL CONSTRAINT DF_ComResAtac_pm1 DEFAULT (0),  -- participação do mix 1
         atingiu_meta     BIT            NOT NULL CONSTRAINT DF_ComResAtac_meta DEFAULT (0),
         abatimento       DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResAtac_abat DEFAULT (0),
+        abatimento_motivo VARCHAR(200)  NULL,
         base_real        DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResAtac_br DEFAULT (0),
         dias_ferias      INT            NOT NULL CONSTRAINT DF_ComResAtac_df DEFAULT (0),
         media_ferias     DECIMAL(18,2)  NOT NULL CONSTRAINT DF_ComResAtac_mf DEFAULT (0),

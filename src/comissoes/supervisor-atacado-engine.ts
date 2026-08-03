@@ -5,13 +5,18 @@
    e a 447 ("Relatório de Vendas por Item com Comissão"). Diferente do vendedor
    de atacado (atacado-engine), o supervisor comissiona sobre TODO o canal de
    atacado (a soma de todos os vendedores juntos), com uma tabela de alíquota
-   PRÓPRIA e FIXA (card 420), sem abatimento nem média de férias:
+   PRÓPRIA e FIXA (card 420), sem média de férias:
 
      - base = Σ liquido_produto de todas as células (mix x faixa) do canal;
      - atingiu_meta = (Σ mix 1 / base) >= 0,30;
      - mix 2/3: alíquota FIXA de 0,55%;
      - mix 1: % FIXO por faixa A/B/C/D, com uma tabela "abaixo" e outra "atingiu";
-     - comissão = Σ (venda_célula * %).
+     - comissão bruta = Σ (venda_célula * %).
+
+   O abatimento (R$) segue a mesma mecânica do vendedor de atacado: reduz a base
+   (base_real = total_vendido − abatimento) e escala a comissão proporcionalmente
+   (fator = base_real / total_vendido). NÃO mexe na participação do mix 1 — não há
+   como saber de qual mix o abatimento saiu, então a meta continua pelo bruto.
 
    Alíquotas embutidas (decisão do usuário: fixas do card 420). Se um dia
    precisarem ser editáveis, basta movê-las para uma tabela de config como o
@@ -72,7 +77,22 @@ export interface ResumoSupervisorAtacado {
   atingiu_meta: boolean;
   /** Alíquota fixa do mix 2/3 (informativa). */
   pct_mix23: number;
+  abatimento: number;
+  abatimento_motivo: string | null;
+  /** total_vendido − abatimento. */
+  base_real: number;
+  /** Σ (venda_célula * %), antes do abatimento. */
+  comissao_bruta: number;
+  /** base_real / total_vendido (1 quando não há abatimento). */
+  fator_abatimento: number;
+  /** Comissão a pagar = comissao_bruta * fator_abatimento. */
   comissao_total: number;
+}
+
+/** Parâmetros manuais do supervisor do atacado (ComissaoParametroManual). */
+export interface ParametroSupervisorAtacado {
+  abatimento: number;
+  abatimento_motivo: string | null;
 }
 
 export interface ResultadoSupervisorAtacado {
@@ -96,11 +116,13 @@ const ordFaixa = (f: string) => ({ A: 1, B: 2, C: 3, D: 4 })[f] ?? 9;
  * Soma as células de TODO o canal (ignora o rep_codigo de origem), agrega por
  * (mix, faixa) e aplica a tabela do supervisor (card 420). `rep` é só o cadastro
  * do supervisor (código/nome) para identificar a quem a comissão pertence.
+ * `parametro` traz o abatimento manual do período (opcional).
  */
 export function calcularSupervisorAtacado(
   celulas: CelulaAtacado[],
   rep: { rep_codigo: number; nome: string | null },
   metaMix1: number = SUP_META_MIX1,
+  parametro?: ParametroSupervisorAtacado,
 ): ResultadoSupervisorAtacado {
   // Agrega o canal inteiro por (mix, faixa).
   const porCelula = new Map<string, DetalheSupervisorAtacado>();
@@ -128,14 +150,20 @@ export function calcularSupervisorAtacado(
   const pct_mix1 = total_vendido > 0 ? total_mix1 / total_vendido : 0;
   const atingiu_meta = pct_mix1 >= metaMix1;
 
-  let comissao_total = 0;
+  let comissao_bruta = 0;
   for (const d of detalhe) {
     d.pct_comissao = pctSupervisorAtacado(d.mix, d.faixa, atingiu_meta);
     d.valor_comissao = d.valor_vendido * d.pct_comissao;
-    comissao_total += d.valor_comissao;
+    comissao_bruta += d.valor_comissao;
   }
 
   detalhe.sort((a, b) => a.mix - b.mix || ordFaixa(a.faixa) - ordFaixa(b.faixa));
+
+  // Abatimento proporcional (mesma mecânica do vendedor de atacado).
+  const abatimento = num(parametro?.abatimento);
+  const base_real = total_vendido - abatimento;
+  const fator_abatimento = total_vendido > 0 ? base_real / total_vendido : 1;
+  const comissao_total = comissao_bruta * fator_abatimento;
 
   return {
     resumo: {
@@ -146,6 +174,13 @@ export function calcularSupervisorAtacado(
       pct_mix1,
       atingiu_meta,
       pct_mix23: SUP_PCT_MIX23,
+      abatimento,
+      abatimento_motivo: abatimento
+        ? ((parametro?.abatimento_motivo ?? '').trim() || null)
+        : null,
+      base_real,
+      comissao_bruta,
+      fator_abatimento,
       comissao_total,
     },
     detalhe,

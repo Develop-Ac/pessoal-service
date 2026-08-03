@@ -339,13 +339,14 @@ export class ComissoesService {
     for (const t of tipoRows) tipoProduto.set(Number(t.pro_codigo), t.tipo);
 
     const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT rep_codigo, abatimento, tem_ferias, dias_ferias, pct_bonus
+      SELECT rep_codigo, abatimento, abatimento_motivo, tem_ferias, dias_ferias, pct_bonus
       FROM dbo.ComissaoParametroManual WHERE periodo_id = ${periodoId}`);
     const parametros = new Map<number, ParametroManual>();
     for (const p of paramRows) {
       parametros.set(Number(p.rep_codigo), {
         rep_codigo: Number(p.rep_codigo),
         abatimento: Number(p.abatimento),
+        abatimento_motivo: p.abatimento_motivo ?? null,
         tem_ferias: !!p.tem_ferias,
         dias_ferias: Number(p.dias_ferias),
         pct_bonus: Number(p.pct_bonus),
@@ -374,12 +375,14 @@ export class ComissoesService {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoVendedor
           (periodo_id, rep_codigo, nome, especial, vendas, devolucao, frete, mao_obra,
-           impostos, pintura, abatimento, media_ferias, dias_ferias, base_real, base_geral,
+           impostos, pintura, abatimento, abatimento_motivo, media_ferias, dias_ferias,
+           base_real, base_geral,
            percentual, valor_comissao, custo, lucratividade)
         VALUES
           (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${v.especial}, ${round2(v.vendas)},
            ${round2(v.devolucao)}, ${round2(v.frete)}, ${round2(v.mao_obra)},
            ${round2(v.impostos)}, ${round2(v.pintura)}, ${round2(v.abatimento)},
+           ${v.abatimento_motivo},
            ${round2(v.media_ferias)}, ${v.dias_ferias}, ${round2(v.base_real)},
            ${round2(v.base_geral)}, ${round6(v.percentual)}, ${round2(v.valor_comissao)},
            ${round2(v.custo)}, ${v.lucratividade == null ? null : round6(v.lucratividade)})`);
@@ -388,11 +391,13 @@ export class ComissoesService {
     for (const t of r.tecnicos) {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoTecnico
-          (periodo_id, rep_codigo, nome, is_supervisor, valor_base, abatimento, base_calculo,
+          (periodo_id, rep_codigo, nome, is_supervisor, valor_base, abatimento,
+           abatimento_motivo, base_calculo,
            percentual, valor_comissao, pct_bonus, valor_bonus, total)
         VALUES
           (${periodoId}, ${t.rep_codigo}, ${t.nome}, ${t.is_supervisor},
-           ${round2(t.valor_base)}, ${round2(t.abatimento)}, ${round2(t.base_calculo)},
+           ${round2(t.valor_base)}, ${round2(t.abatimento)},
+           ${t.abatimento_motivo}, ${round2(t.base_calculo)},
            ${round6(t.percentual)}, ${round2(t.valor_comissao)}, ${round6(t.pct_bonus)},
            ${round2(t.valor_bonus)}, ${round2(t.total)})`);
     }
@@ -486,8 +491,8 @@ export class ComissoesService {
   async listarParametros(periodoId: number) {
     await this.obterPeriodo(periodoId);
     return this.prisma.$queryRaw(Prisma.sql`
-      SELECT p.rep_codigo, r.nome, r.papel, p.abatimento, p.tem_ferias, p.dias_ferias,
-             p.pct_bonus, p.data_atualizacao
+      SELECT p.rep_codigo, r.nome, r.papel, p.abatimento, p.abatimento_motivo,
+             p.tem_ferias, p.dias_ferias, p.pct_bonus, p.data_atualizacao
       FROM dbo.ComissaoParametroManual p
       LEFT JOIN dbo.ComissaoRepresentante r ON r.rep_codigo = p.rep_codigo
       WHERE p.periodo_id = ${periodoId}
@@ -507,14 +512,16 @@ export class ComissoesService {
         ON alvo.periodo_id = fonte.periodo_id AND alvo.rep_codigo = fonte.rep_codigo
       WHEN MATCHED THEN UPDATE SET
         abatimento  = ${dto.abatimento ?? 0},
+        abatimento_motivo = ${motivoAbatimento(dto)},
         tem_ferias  = ${dto.tem_ferias ?? false},
         dias_ferias = ${dto.dias_ferias ?? 0},
         pct_bonus   = ${dto.pct_bonus ?? 0},
         data_atualizacao = GETDATE()
       WHEN NOT MATCHED THEN
-        INSERT (periodo_id, rep_codigo, abatimento, tem_ferias, dias_ferias, pct_bonus)
-        VALUES (${periodoId}, ${repCodigo}, ${dto.abatimento ?? 0}, ${dto.tem_ferias ?? false},
-                ${dto.dias_ferias ?? 0}, ${dto.pct_bonus ?? 0});`);
+        INSERT (periodo_id, rep_codigo, abatimento, abatimento_motivo, tem_ferias,
+                dias_ferias, pct_bonus)
+        VALUES (${periodoId}, ${repCodigo}, ${dto.abatimento ?? 0}, ${motivoAbatimento(dto)},
+                ${dto.tem_ferias ?? false}, ${dto.dias_ferias ?? 0}, ${dto.pct_bonus ?? 0});`);
     return { ok: true };
   }
 
@@ -681,13 +688,14 @@ export class ComissoesService {
     const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : 0.3;
 
     const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT rep_codigo, abatimento, tem_ferias, dias_ferias
+      SELECT rep_codigo, abatimento, abatimento_motivo, tem_ferias, dias_ferias
       FROM dbo.ComissaoParametroManual WHERE periodo_id = ${periodoId}`);
     const parametros = new Map<number, ParametroAtacado>();
     for (const p of paramRows) {
       parametros.set(Number(p.rep_codigo), {
         rep_codigo: Number(p.rep_codigo),
         abatimento: Number(p.abatimento),
+        abatimento_motivo: p.abatimento_motivo ?? null,
         tem_ferias: !!p.tem_ferias,
         dias_ferias: Number(p.dias_ferias),
       });
@@ -712,12 +720,12 @@ export class ComissoesService {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoAtacado
           (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1, atingiu_meta,
-           abatimento, base_real, dias_ferias, media_ferias, total_faixa, pct_mix23,
-           comissao_bruta, fator_abatimento, valor_comissao)
+           abatimento, abatimento_motivo, base_real, dias_ferias, media_ferias, total_faixa,
+           pct_mix23, comissao_bruta, fator_abatimento, valor_comissao)
         VALUES
           (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
            ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
-           ${round2(v.abatimento)}, ${round2(v.base_real)}, ${v.dias_ferias},
+           ${round2(v.abatimento)}, ${v.abatimento_motivo}, ${round2(v.base_real)}, ${v.dias_ferias},
            ${round2(v.media_ferias)}, ${round2(v.total_faixa)}, ${round6(v.pct_mix23)},
            ${round2(v.comissao_bruta)}, ${round6(v.fator_abatimento)}, ${round2(v.valor_comissao)})`);
     }
@@ -815,7 +823,8 @@ export class ComissoesService {
   /**
    * Calcula a comissão do supervisor do atacado sobre TODO o canal (soma das
    * células já lidas para os vendedores). Devolve null se não houver supervisor
-   * cadastrado. A meta de participação reusa a config do atacado (default 0,30).
+   * cadastrado. A meta de participação reusa a config do atacado (default 0,30);
+   * o abatimento vem dos parâmetros manuais do período (proporcional).
    */
   private async calcularSupervisorAtacado(
     periodoId: number,
@@ -827,7 +836,16 @@ export class ComissoesService {
       Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
     );
     const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : undefined;
-    return calcularSupervisorAtacado(celulas, rep, metaMix1);
+    const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT abatimento, abatimento_motivo FROM dbo.ComissaoParametroManual
+      WHERE periodo_id = ${periodoId} AND rep_codigo = ${rep.rep_codigo}`);
+    const parametro = paramRows.length
+      ? {
+          abatimento: Number(paramRows[0].abatimento),
+          abatimento_motivo: paramRows[0].abatimento_motivo ?? null,
+        }
+      : undefined;
+    return calcularSupervisorAtacado(celulas, rep, metaMix1, parametro);
   }
 
   /** Grava o snapshot do supervisor do atacado (apaga e regrava o período). */
@@ -847,11 +865,14 @@ export class ComissoesService {
     await this.prisma.$executeRaw(Prisma.sql`
       INSERT INTO dbo.ComissaoResultadoSupervisorAtacado
         (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1,
-         atingiu_meta, pct_mix23, comissao_total)
+         atingiu_meta, pct_mix23, abatimento, abatimento_motivo, base_real,
+         comissao_bruta, fator_abatimento, comissao_total)
       VALUES
         (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
          ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
-         ${round6(v.pct_mix23)}, ${round2(v.comissao_total)})`);
+         ${round6(v.pct_mix23)}, ${round2(v.abatimento)}, ${v.abatimento_motivo},
+         ${round2(v.base_real)}, ${round2(v.comissao_bruta)},
+         ${round6(v.fator_abatimento)}, ${round2(v.comissao_total)})`);
 
     type Det = (string | number)[];
     const dets: Det[] = r.detalhe.map((d) => [
@@ -891,6 +912,7 @@ export class ComissoesService {
     if (!s) return { resumo: null, detalhe: [], itens: [] };
 
     // Espelha a forma do ResultadoAtacado consumido pela tela/impressão.
+    // (o supervisor não tem férias; abatimento ele tem, proporcional como o vendedor)
     const resumo = {
       rep_codigo: Number(s.rep_codigo),
       nome: s.nome ?? null,
@@ -898,14 +920,15 @@ export class ComissoesService {
       total_mix1: Number(s.total_mix1),
       pct_mix1: Number(s.pct_mix1),
       atingiu_meta: !!s.atingiu_meta,
-      abatimento: 0,
-      base_real: Number(s.total_vendido),
+      abatimento: Number(s.abatimento ?? 0),
+      abatimento_motivo: s.abatimento_motivo ?? null,
+      base_real: Number(s.base_real ?? s.total_vendido),
       dias_ferias: 0,
       media_ferias: 0,
       total_faixa: Number(s.total_vendido),
       pct_mix23: Number(s.pct_mix23),
-      comissao_bruta: Number(s.comissao_total),
-      fator_abatimento: 1,
+      comissao_bruta: Number(s.comissao_bruta ?? s.comissao_total),
+      fator_abatimento: Number(s.fator_abatimento ?? 1),
       valor_comissao: Number(s.comissao_total),
     };
 
@@ -1005,6 +1028,13 @@ export function calcularDatasPeriodo(ano: number, mes: number) {
 function num(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** Motivo só é guardado quando há abatimento (sem abatimento, limpa o campo). */
+function motivoAbatimento(dto: AtualizarParametroDto): string | null {
+  if (!num(dto.abatimento)) return null;
+  const t = (dto.abatimento_motivo ?? '').trim();
+  return t === '' ? null : t.slice(0, 200);
 }
 function round2(v: number): number {
   return Math.round((num(v) + Number.EPSILON) * 100) / 100;

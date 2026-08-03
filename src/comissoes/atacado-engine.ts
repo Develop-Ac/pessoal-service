@@ -55,6 +55,8 @@ export interface RepresentanteAtacado {
 export interface ParametroAtacado {
   rep_codigo: number;
   abatimento: number;
+  /** Justificativa do abatimento (texto livre), carimbada no resultado. */
+  abatimento_motivo: string | null;
   tem_ferias: boolean;
   dias_ferias: number;
 }
@@ -92,6 +94,7 @@ export interface ResultadoAtacado {
   pct_mix1: number;
   atingiu_meta: boolean;
   abatimento: number;
+  abatimento_motivo: string | null;
   base_real: number;
   dias_ferias: number;
   media_ferias: number;
@@ -220,6 +223,9 @@ export function calcularAtacado(
       pct_mix1,
       atingiu_meta,
       abatimento,
+      abatimento_motivo: abatimento
+        ? ((p?.abatimento_motivo ?? '').trim() || null)
+        : null,
       base_real,
       dias_ferias,
       media_ferias,
