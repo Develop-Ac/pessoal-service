@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import type { FastifyRequest } from 'fastify';
 import { IS_PUBLIC_KEY } from './auth.decorators';
 
 /**
@@ -32,9 +32,10 @@ export class JwtAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const req = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest<FastifyRequest>();
     if (req.method === 'OPTIONS') return true;
-    if (req.path === '/metrics') return true;
+    // Fastify nao expoe req.path; req.url inclui a querystring.
+    if (req.url.split('?')[0] === '/metrics') return true;
 
     const token = this.extractToken(req);
     if (!token) {
@@ -73,12 +74,14 @@ export class JwtAuthGuard implements CanActivate {
     });
   }
 
-  private extractToken(req: Request): string | null {
+  private extractToken(req: FastifyRequest): string | null {
     const auth = (req.headers.authorization || '').toString();
     if (/^Bearer\s+/i.test(auth)) {
       return auth.replace(/^Bearer\s+/i, '').trim();
     }
-    const q = (req.query?.token as string | undefined) ?? undefined;
+    const q = (req.query as Record<string, unknown> | undefined)?.token as
+      | string
+      | undefined;
     if (typeof q === 'string' && q.length > 0) return q;
     const b = (req.body && (req.body as any).token) as string | undefined;
     if (typeof b === 'string' && b.length > 0) return b;

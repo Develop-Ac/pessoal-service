@@ -21,12 +21,12 @@ export class MetricsInterceptor implements NestInterceptor {
           const res = context.switchToHttp().getResponse();
           end({
             method: req.method,
-            route: req.route?.path ?? req.url,
+            route: req.routeOptions?.url ?? req.url,
             status_code: res.statusCode,
           });
         },
         error: () => {
-          end({ method: req.method, route: req.route?.path ?? req.url, status_code: 500 });
+          end({ method: req.method, route: req.routeOptions?.url ?? req.url, status_code: 500 });
         },
       }),
     );

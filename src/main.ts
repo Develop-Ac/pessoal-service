@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import * as dotenv from 'dotenv';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import helmet from 'helmet';
+import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as bodyParser from 'body-parser';
 
 // Serializa BigInt (ex.: colunas BIGINT como ComissaoMovimento.nfs) como número
 // no JSON — sem isso, JSON.stringify lança "Do not know how to serialize a BigInt".
@@ -15,15 +19,25 @@ import * as bodyParser from 'body-parser';
   return Number(this);
 };
 
+/** Limite de corpo das requisições (equivalente ao body-parser 25mb anterior). */
+const BODY_LIMIT = 25 * 1024 * 1024;
+
 async function bootstrap() {
   // Carrega variáveis do arquivo .env (se existir)
   try {
     dotenv.config();
   } catch (_) {}
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
-
-  // Confia no proxy reverso para obter o IP real do cliente (rate-limit por IP).
-  (app.getHttpAdapter().getInstance() as any).set('trust proxy', 1);
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      // Confia no proxy reverso para obter o IP real do cliente (rate-limit por IP).
+      trustProxy: 1,
+      // Fastify já parseia application/json e x-www-form-urlencoded nativamente;
+      // aqui só se ajusta o limite que antes vinha do body-parser.
+      bodyLimit: BODY_LIMIT,
+    }),
+    { bufferLogs: true },
+  );
 
   // Validação/sanitização global de payloads.
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -31,20 +45,21 @@ async function bootstrap() {
   // Filtro global: não vaza stack/detalhes em erros não tratados.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: false,
-      crossOriginEmbedderPolicy: false,
-    }),
-  );
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  });
+
+  // Upload multipart (PDFs da folha) — substitui o multer do platform-express.
+  await app.register(multipart, {
+    limits: { fileSize: BODY_LIMIT },
+  });
+
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? true,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
-
-  app.use(bodyParser.json({ limit: '25mb' }));
-  app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
 
   if (process.env.SWAGGER_ENABLED === 'true') {
     const config = new DocumentBuilder()

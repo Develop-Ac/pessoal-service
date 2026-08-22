@@ -9,7 +9,7 @@ import {
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FastifyFilesInterceptor } from '../common/interceptors/fastify-files.interceptor';
 import {
   ApiBody,
   ApiConsumes,
@@ -40,7 +40,7 @@ export class ImportacaoFolhaController {
       },
     },
   })
-  @UseInterceptors(FilesInterceptor('arquivos', 20))
+  @UseInterceptors(FastifyFilesInterceptor('arquivos', 20))
   async processarArquivos(
     @UploadedFiles() arquivos: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
     @Body() dto: ProcessarFolhaDto,
