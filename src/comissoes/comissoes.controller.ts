@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,9 +8,20 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { FastifyFilesInterceptor } from '../common/interceptors/fastify-files.interceptor';
 import { ComissoesService } from './comissoes.service';
 import {
   AbrirPeriodoDto,
@@ -19,6 +31,7 @@ import {
   CanalHistDto,
   ListarRepresentantesQuery,
   RecalcularDto,
+  SalvarPontoDto,
 } from './comissoes.dto';
 
 @ApiTags('Comissões')
@@ -126,6 +139,64 @@ export class ComissoesController {
   })
   relatorioSupervisorAtacado(@Param('id', ParseIntPipe) id: number) {
     return this.service.relatorioSupervisorAtacado(id);
+  }
+
+  /* ------------------------ Cartão ponto (RH) -------------------------- */
+
+  @Post('periodos/:id/ponto/processar')
+  @ApiOperation({
+    summary:
+      'Lê os PDFs do CARTÃO PONTO (Sécullum) e devolve o preview dos dias de FALTA/DISPENSA (nada é gravado)',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        arquivos: { type: 'array', items: { type: 'string', format: 'binary' } },
+      },
+    },
+  })
+  @UseInterceptors(FastifyFilesInterceptor('arquivos', 30))
+  processarPonto(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles()
+    arquivos: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
+  ) {
+    const validos = (arquivos ?? []).filter(
+      (a) => a.originalname && a.originalname.toLowerCase().endsWith('.pdf'),
+    );
+    if (validos.length === 0) {
+      throw new BadRequestException('Envie ao menos um arquivo PDF do cartão ponto.');
+    }
+    return this.service.processarCartaoPonto(
+      id,
+      validos.map((a) => ({ nome: a.originalname, buffer: a.buffer })),
+    );
+  }
+
+  @Get('periodos/:id/ponto')
+  @ApiOperation({ summary: 'Dias de FALTA/DISPENSA gravados no período (por vendedor)' })
+  listarPonto(@Param('id', ParseIntPipe) id: number) {
+    return this.service.listarPonto(id);
+  }
+
+  @Put('periodos/:id/ponto')
+  @ApiOperation({
+    summary:
+      'Confirma a importação: grava os dias por vendedor (substitui os anteriores) e recalcula o período',
+  })
+  salvarPonto(@Param('id', ParseIntPipe) id: number, @Body() dto: SalvarPontoDto) {
+    return this.service.salvarPonto(id, dto);
+  }
+
+  @Delete('periodos/:id/ponto/:rep')
+  @ApiOperation({ summary: 'Remove as exclusões de ponto de um vendedor e recalcula' })
+  removerPonto(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('rep', ParseIntPipe) rep: number,
+  ) {
+    return this.service.removerPonto(id, rep);
   }
 
   /* ---------------------------- Parâmetros ---------------------------- */

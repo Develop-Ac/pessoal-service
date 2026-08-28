@@ -99,6 +99,12 @@ export interface ConfiguracaoCalculo {
   faixas: FaixaPercentual[];
   representantes: Map<number, Representante>;
   parametros: Map<number, ParametroManual>;
+  /**
+   * Dias de FALTA/DISPENSA do cartão ponto: rep_codigo -> (data YYYY-MM-DD ->
+   * motivo). Vendas e mão de obra desses dias saem da base do vendedor;
+   * devoluções continuam contando.
+   */
+  pontoExclusoes?: Map<number, Map<string, string>>;
   /** dias corridos do período (26 -> 25). */
   diasCorridos: number;
   /** % fixo do técnico (default 0,0175). */
@@ -124,6 +130,9 @@ export interface VendaCalculada extends VendaRow {
   vendedor: number | null;
   tipo: string;
   custo: number;
+  /** Excluído da base pelo cartão ponto (dia de FALTA/DISPENSA do vendedor). */
+  excluido_ponto: boolean;
+  excluido_motivo: string | null;
 }
 
 /** Item de Serviço com colunas calculadas. */
@@ -145,6 +154,11 @@ export interface ResultadoVendedor {
   mao_obra: number;
   impostos: number;
   pintura: number;
+  /** Total (líquido) de vendas/mão de obra excluído pelo cartão ponto. */
+  excluido_ponto: number;
+  itens_excluidos_ponto: number;
+  dias_falta: number;
+  dias_dispensa: number;
   abatimento: number;
   abatimento_motivo: string | null;
   media_ferias: number;
@@ -249,7 +263,48 @@ export function calcularVendas(
         : r.vendedor_item;
     const tipo = classificarTipo(r.opf_codigo, r.pro_codigo, tipoProduto);
     const custo = num(r.preco_custo) * num(r.quantidade);
-    return { ...r, total_produtos2, total_desconto, liquido, vendedor, tipo, custo };
+    return {
+      ...r,
+      total_produtos2,
+      total_desconto,
+      liquido,
+      vendedor,
+      tipo,
+      custo,
+      excluido_ponto: false,
+      excluido_motivo: null,
+    };
+  });
+}
+
+/* ------------------------- Exclusões do cartão ponto ------------------------ */
+
+/** Tipos que compõem a base do vendedor e por isso são excluíveis pelo ponto. */
+const TIPOS_EXCLUIVEIS_PONTO = new Set([TIPO_VENDAS, TIPO_MAO_OBRA]);
+
+/** Data (YYYY-MM-DD) da emissão em UTC — DATE do banco volta como meia-noite UTC. */
+export function dataYmdUtc(d: Date | null): string | null {
+  return d ? d.toISOString().slice(0, 10) : null;
+}
+
+/**
+ * Marca como excluído o item de venda emitido num dia em que o cartão ponto do
+ * vendedor registra FALTA ou DISPENSA. Devoluções NUNCA são excluídas (seguem
+ * abatendo a base); frete/impostos/pintura já não comissionam e ficam como estão.
+ */
+export function aplicarExclusoesPonto(
+  vendas: VendaCalculada[],
+  exclusoes?: Map<number, Map<string, string>>,
+): VendaCalculada[] {
+  if (!exclusoes || exclusoes.size === 0) return vendas;
+  return vendas.map((v) => {
+    if (v.vendedor == null || !TIPOS_EXCLUIVEIS_PONTO.has(v.tipo)) return v;
+    const dias = exclusoes.get(v.vendedor);
+    if (!dias) return v;
+    const dia = dataYmdUtc(v.dt_emissao);
+    const motivo = dia ? dias.get(dia) : undefined;
+    if (!motivo) return v;
+    return { ...v, excluido_ponto: true, excluido_motivo: motivo };
   });
 }
 
@@ -332,16 +387,22 @@ export function agregarVendedores(
   cfg: ConfiguracaoCalculo,
 ): ResultadoVendedor[] {
   // Soma por (vendedor, tipo) de líquido e do custo (só TIPO=VENDAS).
+  // Itens excluídos pelo cartão ponto ficam fora dos totais e acumulam à parte.
   const porVendedor = new Map<
     number,
-    { tipos: Map<string, number>; custo: number }
+    { tipos: Map<string, number>; custo: number; excluido: number; itensExcluidos: number }
   >();
   for (const v of vendas) {
     if (v.vendedor == null) continue;
     let acc = porVendedor.get(v.vendedor);
     if (!acc) {
-      acc = { tipos: new Map(), custo: 0 };
+      acc = { tipos: new Map(), custo: 0, excluido: 0, itensExcluidos: 0 };
       porVendedor.set(v.vendedor, acc);
+    }
+    if (v.excluido_ponto) {
+      acc.excluido += v.liquido;
+      acc.itensExcluidos += 1;
+      continue;
     }
     acc.tipos.set(v.tipo, (acc.tipos.get(v.tipo) ?? 0) + v.liquido);
     if (v.tipo === TIPO_VENDAS) acc.custo += v.custo;
@@ -392,6 +453,14 @@ export function agregarVendedores(
     const valor_comissao = base_real * percentual;
     const lucratividade = acc.custo !== 0 ? (vendasV - acc.custo) / acc.custo : null;
 
+    // Dias de ausência do cartão ponto (informativo do demonstrativo).
+    let dias_falta = 0;
+    let dias_dispensa = 0;
+    for (const motivoDia of cfg.pontoExclusoes?.get(cod)?.values() ?? []) {
+      if (motivoDia === 'DISPENSA') dias_dispensa += 1;
+      else dias_falta += 1;
+    }
+
     resultado.push({
       rep_codigo: cod,
       nome: rep.nome,
@@ -402,6 +471,10 @@ export function agregarVendedores(
       mao_obra,
       impostos,
       pintura,
+      excluido_ponto: acc.excluido,
+      itens_excluidos_ponto: acc.itensExcluidos,
+      dias_falta,
+      dias_dispensa,
       abatimento,
       abatimento_motivo,
       media_ferias,
@@ -567,7 +640,10 @@ export function calcular(
   os: OsRow[],
   cfg: ConfiguracaoCalculo,
 ): ResultadoComissao {
-  const vendasCalculadas = calcularVendas(vendas, cfg.tipoProduto);
+  const vendasCalculadas = aplicarExclusoesPonto(
+    calcularVendas(vendas, cfg.tipoProduto),
+    cfg.pontoExclusoes,
+  );
   const servicosCalculados = calcularServicos(servicos);
   return {
     vendedores: agregarVendedores(vendasCalculadas, cfg),

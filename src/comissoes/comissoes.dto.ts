@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -205,6 +206,54 @@ export class AtualizarAtacadoConfigDto {
   @Min(0)
   @Max(1)
   meta_mix1?: number;
+}
+
+/** Um dia excluído pelo cartão ponto (FALTA/DISPENSA). */
+export class PontoDiaDto {
+  @ApiProperty({ example: '2026-08-01', description: 'Data do dia (YYYY-MM-DD)' })
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'data deve ser YYYY-MM-DD' })
+  data!: string;
+
+  @ApiProperty({ example: 'FALTA', enum: ['FALTA', 'DISPENSA'] })
+  @IsIn(['FALTA', 'DISPENSA'])
+  motivo!: 'FALTA' | 'DISPENSA';
+}
+
+/** Dias de ausência de UM vendedor no período (substitui os já gravados). */
+export class PontoRepDto {
+  @ApiProperty({ example: 164 })
+  @Type(() => Number)
+  @IsInt()
+  rep_codigo!: number;
+
+  @ApiPropertyOptional({ example: 'RENAN FERREIRA MAFIOLETTI', description: 'Nome impresso no cartão (auditoria)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  nome_cartao?: string;
+
+  @ApiPropertyOptional({ example: 'CARTÃO PONTO RENAN.pdf', description: 'PDF de origem (auditoria)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  arquivo?: string;
+
+  @ApiProperty({ type: [PontoDiaDto], description: 'Lista vazia limpa as exclusões do vendedor' })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PontoDiaDto)
+  dias!: PontoDiaDto[];
+}
+
+/** Confirmação da importação do cartão ponto (grava e recalcula). */
+export class SalvarPontoDto {
+  @ApiProperty({ type: [PontoRepDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PontoRepDto)
+  itens!: PontoRepDto[];
 }
 
 /** Filtros da listagem de representantes. */

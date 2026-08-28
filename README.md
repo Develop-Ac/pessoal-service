@@ -66,6 +66,9 @@ internamente; o proxy reverso roteia por hostname). Swagger em `/docs` quando
 | GET | `/comissoes/periodos/:id/resultado` | Dinâmica (vendedores + técnicos) |
 | GET | `/comissoes/periodos/:id/relatorio/{vendas\|servicos}/:rep` | Relatório sintético p/ assinatura |
 | GET/PATCH | `/comissoes/periodos/:id/parametros[/:rep]` | Abatimento (+ motivo), férias, %bônus por rep |
+| POST | `/comissoes/periodos/:id/ponto/processar` | Upload dos PDFs do CARTÃO PONTO (Sécullum) → preview dos dias de falta/dispensa |
+| GET/PUT | `/comissoes/periodos/:id/ponto` | Lista / confirma os dias por vendedor (PUT grava e recalcula) |
+| DELETE | `/comissoes/periodos/:id/ponto/:rep` | Remove as exclusões de um vendedor e recalcula |
 | GET/PATCH | `/comissoes/representantes[/:rep]` | Cadastro (especial/local_venda/papel) |
 | POST | `/comissoes/representantes/sincronizar` | Sincroniza nome/comissiona/inativo do Firebird |
 | GET | `/comissoes/{faixas\|tipos-produto}` | Configuração (TABELA % e PRO→TIPO) |
@@ -110,6 +113,31 @@ npm run db:pull && npm run db:generate
   (`papel` nulo); habilite caso a caso no cadastro.
 - Vendedores sem venda real (ou só devolução) aparecem para revisão; remova o
   `papel` de quem não é vendedor de fato para tirá-lo do cálculo.
+
+### Cartão ponto (Sécullum) — vendas de dias de falta/dispensa fora da base
+
+O RH importa o PDF "CARTÃO PONTO" do Secullum Ponto pela aba **Cartão ponto**
+da tela de comissões. Regras (decididas com o usuário):
+
+- Nos dias marcados **FALTA** ou **DISPENSA** o vendedor não estava na loja:
+  as **VENDAS e a MÃO DE OBRA** desses dias saem da base de comissão.
+- As **DEVOLUÇÕES continuam contando** (seguem abatendo a base), mesmo nos
+  dias excluídos. Frete/impostos/pintura não mudam (já não comissionavam).
+- O item excluído fica carimbado no `ComissaoMovimento`
+  (`excluido_ponto`/`excluido_motivo`) e sai **discriminado no demonstrativo
+  de assinatura**, com o motivo e a lista dos dias.
+- Fluxo: upload → o backend lê o PDF (`extrator-ponto.ts`, que detecta a
+  página rotacionada 90° do Sécullum e separa batidas de totalizadores pela
+  coluna NORMAIS) → preview na tela com o vendedor sugerido por nome → o RH
+  confere/ajusta e confirma → grava `ComissaoPontoDia` e **recalcula na hora**
+  (reusa o movimento em cache).
+- Dia com marcação E batida (abono parcial) volta como `parcial` e vem
+  **desmarcado** no preview — a decisão é do RH.
+- Aplica-se só ao **varejo** (papel VENDEDOR); atacado e técnicos ficam fora.
+
+Esquema: aplicar manualmente `sql/05_comissoes_ponto.sql` (cria
+`ComissaoPontoDia` e adiciona as colunas de exclusão em `ComissaoMovimento` e
+`ComissaoResultadoVendedor`).
 
 ### Abatimento
 

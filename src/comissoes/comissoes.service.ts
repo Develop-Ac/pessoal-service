@@ -43,7 +43,9 @@ import {
   CanalHistDto,
   ListarRepresentantesQuery,
   ParametroItemDto,
+  SalvarPontoDto,
 } from './comissoes.dto';
+import { extrairCartaoPonto } from './extrator-ponto';
 
 /** Movimento bruto lido das origens, mantido em memória p/ recalcular sem rebuscar. */
 interface MovimentoCache {
@@ -353,7 +355,26 @@ export class ComissoesService {
       });
     }
 
-    return { tipoProduto, faixas, representantes, parametros, diasCorridos };
+    const pontoExclusoes = await this.carregarPontoExclusoes(periodoId);
+
+    return { tipoProduto, faixas, representantes, parametros, pontoExclusoes, diasCorridos };
+  }
+
+  /** Dias de FALTA/DISPENSA do cartão ponto: rep -> (YYYY-MM-DD -> motivo). */
+  private async carregarPontoExclusoes(
+    periodoId: number,
+  ): Promise<Map<number, Map<string, string>>> {
+    // CONVERT em varchar evita o vaivém de fuso do tipo DATE no driver.
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT rep_codigo, CONVERT(varchar(10), data, 23) AS data, motivo
+      FROM dbo.ComissaoPontoDia WHERE periodo_id = ${periodoId}`);
+    const mapa = new Map<number, Map<string, string>>();
+    for (const r of rows) {
+      const cod = Number(r.rep_codigo);
+      if (!mapa.has(cod)) mapa.set(cod, new Map());
+      mapa.get(cod)!.set(String(r.data), String(r.motivo));
+    }
+    return mapa;
   }
 
   /** Grava o snapshot (apaga e regrava o período). */
@@ -375,14 +396,16 @@ export class ComissoesService {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoVendedor
           (periodo_id, rep_codigo, nome, especial, vendas, devolucao, frete, mao_obra,
-           impostos, pintura, abatimento, abatimento_motivo, media_ferias, dias_ferias,
+           impostos, pintura, excluido_ponto, itens_excluidos_ponto, dias_falta,
+           dias_dispensa, abatimento, abatimento_motivo, media_ferias, dias_ferias,
            base_real, base_geral,
            percentual, valor_comissao, custo, lucratividade)
         VALUES
           (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${v.especial}, ${round2(v.vendas)},
            ${round2(v.devolucao)}, ${round2(v.frete)}, ${round2(v.mao_obra)},
-           ${round2(v.impostos)}, ${round2(v.pintura)}, ${round2(v.abatimento)},
-           ${v.abatimento_motivo},
+           ${round2(v.impostos)}, ${round2(v.pintura)}, ${round2(v.excluido_ponto)},
+           ${v.itens_excluidos_ponto}, ${v.dias_falta}, ${v.dias_dispensa},
+           ${round2(v.abatimento)}, ${v.abatimento_motivo},
            ${round2(v.media_ferias)}, ${v.dias_ferias}, ${round2(v.base_real)},
            ${round2(v.base_geral)}, ${round6(v.percentual)}, ${round2(v.valor_comissao)},
            ${round2(v.custo)}, ${v.lucratividade == null ? null : round6(v.lucratividade)})`);
@@ -403,7 +426,7 @@ export class ComissoesService {
     }
 
     // Movimento (item-a-item) em lotes parametrizados.
-    type Mov = (string | number | Date | null)[];
+    type Mov = (string | number | boolean | Date | null)[];
     const movs: Mov[] = [];
     for (const v of r.vendasCalculadas) {
       movs.push([
@@ -411,6 +434,7 @@ export class ComissoesService {
         v.ordem_servico, v.cli_codigo, v.cli_nome, v.pro_codigo, v.pro_descricao,
         v.opf_codigo, num(v.quantidade), num(v.unitario), round2(v.total_produtos2),
         round2(v.total_desconto), round2(v.liquido), round2(v.custo), v.tipo,
+        v.excluido_ponto, v.excluido_motivo,
       ]);
     }
     for (const s of r.servicosCalculados) {
@@ -419,12 +443,14 @@ export class ComissoesService {
         null, s.cli_codigo, s.cli_nome, s.pro_codigo, s.pro_descricao,
         null, num(s.quantidade), num(s.unitario), round2(s.total_produtos2),
         round2(s.total_desconto), round2(s.base_comissao), null, 'SERVICO',
+        false, null,
       ]);
     }
 
     const COLS = Prisma.sql`(periodo_id, origem, rep_codigo, nfs, nota_fiscal, dt_emissao,
       ordem_servico, cli_codigo, cli_nome, pro_codigo, pro_descricao, opf_codigo,
-      quantidade, unitario, total_produtos2, desconto, liquido, custo, tipo)`;
+      quantidade, unitario, total_produtos2, desconto, liquido, custo, tipo,
+      excluido_ponto, excluido_motivo)`;
     const LOTE = 100;
     for (let i = 0; i < movs.length; i += LOTE) {
       const fatia = movs.slice(i, i + LOTE);
@@ -454,7 +480,8 @@ export class ComissoesService {
     await this.obterPeriodo(periodoId);
     return this.prisma.$queryRaw(Prisma.sql`
       SELECT nfs, nota_fiscal, dt_emissao, cli_nome, pro_codigo, pro_descricao,
-             quantidade, unitario, total_produtos2, desconto, liquido, tipo
+             quantidade, unitario, total_produtos2, desconto, liquido, tipo,
+             excluido_ponto, excluido_motivo
       FROM dbo.ComissaoMovimento
       WHERE periodo_id = ${periodoId} AND origem = 'VENDAS' AND rep_codigo = ${repCodigo}
       ORDER BY dt_emissao, nfs`);
@@ -523,6 +550,158 @@ export class ComissoesService {
         VALUES (${periodoId}, ${repCodigo}, ${dto.abatimento ?? 0}, ${motivoAbatimento(dto)},
                 ${dto.tem_ferias ?? false}, ${dto.dias_ferias ?? 0}, ${dto.pct_bonus ?? 0});`);
     return { ok: true };
+  }
+
+  /* ====================== CARTÃO PONTO (Sécullum) ====================== */
+
+  /**
+   * Lê os PDFs do CARTÃO PONTO e devolve o PREVIEW (nada é gravado): por
+   * arquivo, o colaborador identificado, o vendedor sugerido do cadastro e os
+   * dias de FALTA/DISPENSA encontrados. O RH confere na tela e confirma com
+   * salvarPonto().
+   */
+  async processarCartaoPonto(
+    periodoId: number,
+    arquivos: { nome: string; buffer: Buffer }[],
+  ) {
+    const periodo = await this.obterPeriodo(periodoId);
+    const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
+
+    const vendedores = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT rep_codigo, nome FROM dbo.ComissaoRepresentante
+      WHERE papel = 'VENDEDOR' AND inativo = 0`);
+
+    const resultado: any[] = [];
+    for (const arq of arquivos) {
+      try {
+        const cartao = await extrairCartaoPonto(arq.buffer, arq.nome);
+        const avisos = [...cartao.avisos];
+
+        if (
+          cartao.periodo_inicio &&
+          (cartao.periodo_inicio !== dataIniYmd || cartao.periodo_fim !== dataFimYmd)
+        ) {
+          avisos.push(
+            `O cartão cobre ${cartao.periodo_inicio} a ${cartao.periodo_fim}, mas a ` +
+              `competência vai de ${dataIniYmd} a ${dataFimYmd}.`,
+          );
+        }
+        const dias = cartao.dias.filter((d) => {
+          const dentro = d.data >= dataIniYmd && d.data <= dataFimYmd;
+          if (!dentro)
+            avisos.push(`Dia ${d.data} (${d.motivo.toLowerCase()}) está fora da competência — ignorado.`);
+          return dentro;
+        });
+
+        const sugerido = sugerirRepresentante(cartao.nome, vendedores);
+        resultado.push({
+          arquivo: arq.nome,
+          nome_cartao: cartao.nome,
+          cpf: cartao.cpf,
+          folha: cartao.folha,
+          periodo_inicio: cartao.periodo_inicio,
+          periodo_fim: cartao.periodo_fim,
+          rep_sugerido: sugerido?.rep_codigo ?? null,
+          rep_sugerido_nome: sugerido?.nome ?? null,
+          dias,
+          avisos,
+        });
+      } catch (e) {
+        resultado.push({
+          arquivo: arq.nome,
+          nome_cartao: null,
+          cpf: null,
+          folha: null,
+          periodo_inicio: null,
+          periodo_fim: null,
+          rep_sugerido: null,
+          rep_sugerido_nome: null,
+          dias: [],
+          avisos: [
+            `Falha ao ler o PDF: ${e instanceof Error ? e.message : String(e)}`,
+          ],
+        });
+      }
+    }
+    return { periodo_id: periodoId, arquivos: resultado };
+  }
+
+  /** Dias de ausência já gravados no período, agrupados por vendedor. */
+  async listarPonto(periodoId: number) {
+    await this.obterPeriodo(periodoId);
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT p.rep_codigo, r.nome, CONVERT(varchar(10), p.data, 23) AS data,
+             p.motivo, p.nome_cartao, p.arquivo, p.data_importacao
+      FROM dbo.ComissaoPontoDia p
+      LEFT JOIN dbo.ComissaoRepresentante r ON r.rep_codigo = p.rep_codigo
+      WHERE p.periodo_id = ${periodoId}
+      ORDER BY r.nome, p.data`);
+    const porRep = new Map<number, any>();
+    for (const r of rows) {
+      const cod = Number(r.rep_codigo);
+      if (!porRep.has(cod)) {
+        porRep.set(cod, {
+          rep_codigo: cod,
+          nome: r.nome ?? null,
+          nome_cartao: r.nome_cartao ?? null,
+          arquivo: r.arquivo ?? null,
+          dias: [],
+        });
+      }
+      porRep.get(cod)!.dias.push({ data: String(r.data), motivo: String(r.motivo) });
+    }
+    return [...porRep.values()];
+  }
+
+  /**
+   * Grava os dias confirmados na tela (substitui os do vendedor no período) e
+   * RECALCULA o período reusando o movimento em cache. Lista de dias vazia
+   * limpa as exclusões do vendedor.
+   */
+  async salvarPonto(periodoId: number, dto: SalvarPontoDto) {
+    const periodo = await this.obterPeriodo(periodoId);
+    if (periodo.status === 'FECHADO') {
+      throw new BadRequestException('Período fechado: reabra para importar o ponto.');
+    }
+    const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
+    for (const item of dto.itens) {
+      for (const dia of item.dias) {
+        if (dia.data < dataIniYmd || dia.data > dataFimYmd) {
+          throw new BadRequestException(
+            `Dia ${dia.data} está fora da competência (${dataIniYmd} a ${dataFimYmd}).`,
+          );
+        }
+      }
+    }
+
+    for (const item of dto.itens) {
+      await this.prisma.$executeRaw(Prisma.sql`
+        DELETE FROM dbo.ComissaoPontoDia
+        WHERE periodo_id = ${periodoId} AND rep_codigo = ${item.rep_codigo}`);
+      for (const dia of item.dias) {
+        await this.prisma.$executeRaw(Prisma.sql`
+          INSERT INTO dbo.ComissaoPontoDia
+            (periodo_id, rep_codigo, data, motivo, nome_cartao, arquivo)
+          VALUES (${periodoId}, ${item.rep_codigo}, ${dia.data}, ${dia.motivo},
+                  ${item.nome_cartao ?? null}, ${item.arquivo ?? null})`);
+      }
+    }
+
+    const recalculo = await this.recalcular(periodoId);
+    return { ...recalculo, ponto: await this.listarPonto(periodoId) };
+  }
+
+  /** Remove as exclusões de um vendedor no período e recalcula. */
+  async removerPonto(periodoId: number, repCodigo: number) {
+    const periodo = await this.obterPeriodo(periodoId);
+    if (periodo.status === 'FECHADO') {
+      throw new BadRequestException('Período fechado: reabra para alterar o ponto.');
+    }
+    await this.prisma.$executeRaw(Prisma.sql`
+      DELETE FROM dbo.ComissaoPontoDia
+      WHERE periodo_id = ${periodoId} AND rep_codigo = ${repCodigo}`);
+    const recalculo = await this.recalcular(periodoId);
+    return { ...recalculo, ponto: await this.listarPonto(periodoId) };
   }
 
   /* ========================= REPRESENTANTES =========================== */
@@ -1028,6 +1207,54 @@ export function calcularDatasPeriodo(ano: number, mes: number) {
 function num(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** Normaliza nome para casamento: sem acento, maiúsculo, sem conectivos. */
+function tokensNome(nome: string | null | undefined): string[] {
+  if (!nome) return [];
+  const CONECTIVOS = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'E']);
+  return nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .split(/\s+/)
+    .filter((t) => t.length >= 2 && !CONECTIVOS.has(t));
+}
+
+/**
+ * Sugere o representante cujo nome mais casa com o nome impresso no cartão.
+ * Sugere só com pelo menos 2 tokens em comum, OU 1 token quando o primeiro
+ * nome do cartão é único no cadastro (o Firebird costuma guardar só "RENAN").
+ */
+function sugerirRepresentante(
+  nomeCartao: string | null,
+  vendedores: { rep_codigo: unknown; nome: unknown }[],
+): { rep_codigo: number; nome: string | null } | null {
+  const alvo = tokensNome(nomeCartao);
+  if (!alvo.length) return null;
+
+  let melhor: { rep_codigo: number; nome: string | null } | null = null;
+  let melhorScore = 0;
+  let empate = false;
+  const primeiroNomeMatches: { rep_codigo: number; nome: string | null }[] = [];
+
+  for (const v of vendedores) {
+    const rep = { rep_codigo: Number(v.rep_codigo), nome: (v.nome as string) ?? null };
+    const tokens = tokensNome(rep.nome);
+    const score = tokens.filter((t) => alvo.includes(t)).length;
+    if (tokens[0] && tokens[0] === alvo[0]) primeiroNomeMatches.push(rep);
+    if (score > melhorScore) {
+      melhorScore = score;
+      melhor = rep;
+      empate = false;
+    } else if (score === melhorScore && score > 0) {
+      empate = true;
+    }
+  }
+
+  if (melhor && melhorScore >= 2 && !empate) return melhor;
+  if (primeiroNomeMatches.length === 1) return primeiroNomeMatches[0];
+  return null;
 }
 
 /** Motivo só é guardado quando há abatimento (sem abatimento, limpa o campo). */
