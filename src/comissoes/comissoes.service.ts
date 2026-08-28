@@ -453,40 +453,44 @@ export class ComissoesService {
     }
 
     // Movimento (item-a-item) em lotes parametrizados.
-    type Mov = (string | number | boolean | Date | null)[];
-    const movs: Mov[] = [];
+    //
+    // ⚠️ As colunas VARCHAR anuláveis vão com CAST explícito: no VALUES
+    // multi-linha o SQL Server unifica o tipo de cada posição entre as linhas
+    // e o driver tipa NULL como int — misturar 'FALTA' (linha excluída) com
+    // NULL (linha normal) fazia o int vencer por precedência e estourar a
+    // conversão (erro 245). O CAST fixa o tipo da posição em varchar.
+    const vchar = (v: string | null, tam: number) =>
+      Prisma.sql`CAST(${v} AS varchar(${Prisma.raw(String(tam))}))`;
+    const movs: Prisma.Sql[] = [];
     for (const v of r.vendasCalculadas) {
-      movs.push([
-        periodoId, 'VENDAS', v.vendedor, v.nfs, v.nota_fiscal, v.dt_emissao,
-        v.ordem_servico, v.cli_codigo, v.cli_nome, v.pro_codigo, v.pro_descricao,
-        v.opf_codigo, num(v.quantidade), num(v.unitario), round2(v.total_produtos2),
-        round2(v.total_desconto), round2(v.liquido), round2(v.custo), v.tipo,
-        v.excluido_ponto, v.excluido_motivo,
-      ]);
+      movs.push(Prisma.sql`(${periodoId}, 'VENDAS', ${v.vendedor}, ${v.nfs},
+        ${vchar(v.nota_fiscal, 50)}, ${v.dt_emissao}, ${vchar(v.ordem_servico, 50)},
+        ${v.cli_codigo}, ${vchar(v.cli_nome, 200)}, ${v.pro_codigo},
+        ${vchar(v.pro_descricao, 250)}, ${v.opf_codigo}, ${num(v.quantidade)},
+        ${num(v.unitario)}, ${round2(v.total_produtos2)}, ${round2(v.total_desconto)},
+        ${round2(v.liquido)}, ${round2(v.custo)}, ${v.tipo}, ${v.excluido_ponto},
+        ${vchar(v.excluido_motivo, 20)})`);
     }
     for (const s of r.servicosCalculados) {
-      movs.push([
-        periodoId, 'SERVICO', s.comissionado, s.nfs, s.nota_fiscal, s.dt_emissao,
-        null, s.cli_codigo, s.cli_nome, s.pro_codigo, s.pro_descricao,
-        null, num(s.quantidade), num(s.unitario), round2(s.total_produtos2),
-        round2(s.total_desconto), round2(s.base_comissao), null, 'SERVICO',
-        false, null,
-      ]);
+      movs.push(Prisma.sql`(${periodoId}, 'SERVICO', ${s.comissionado}, ${s.nfs},
+        ${vchar(s.nota_fiscal, 50)}, ${s.dt_emissao}, ${vchar(null, 50)},
+        ${s.cli_codigo}, ${vchar(s.cli_nome, 200)}, ${s.pro_codigo},
+        ${vchar(s.pro_descricao, 250)}, ${null}, ${num(s.quantidade)},
+        ${num(s.unitario)}, ${round2(s.total_produtos2)}, ${round2(s.total_desconto)},
+        ${round2(s.base_comissao)}, ${null}, ${'SERVICO'}, ${false},
+        ${vchar(null, 20)})`);
     }
 
     const COLS = Prisma.sql`(periodo_id, origem, rep_codigo, nfs, nota_fiscal, dt_emissao,
       ordem_servico, cli_codigo, cli_nome, pro_codigo, pro_descricao, opf_codigo,
       quantidade, unitario, total_produtos2, desconto, liquido, custo, tipo,
       excluido_ponto, excluido_motivo)`;
-    // 21 colunas/linha: o SQL Server aceita no máx. 2100 parâmetros por lote.
+    // 20 parâmetros/linha (origem é literal): teto de 2100 parâmetros por lote.
     const LOTE = 90;
     for (let i = 0; i < movs.length; i += LOTE) {
       const fatia = movs.slice(i, i + LOTE);
-      const tuplas = fatia.map(
-        (m) => Prisma.sql`(${Prisma.join(m)})`,
-      );
       await this.prisma.$executeRaw(Prisma.sql`
-        INSERT INTO dbo.ComissaoMovimento ${COLS} VALUES ${Prisma.join(tuplas)}`);
+        INSERT INTO dbo.ComissaoMovimento ${COLS} VALUES ${Prisma.join(fatia)}`);
     }
   }
 
