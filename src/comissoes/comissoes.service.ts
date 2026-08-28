@@ -74,6 +74,13 @@ export class ComissoesService {
   private readonly jobs = new Map<string, JobCalculo>();
   /** Movimento por período (cache em memória) para recalcular sem ir ao Firebird. */
   private readonly movimentoCache = new Map<number, MovimentoCache>();
+  /**
+   * Fila por período: dois recálculos simultâneos (ex.: duplo clique, salvar
+   * ponto + parâmetros) intercalavam o apaga-e-regrava dos snapshots e
+   * estouravam as UNIQUEs (periodo_id, rep_codigo). Aqui cada recálculo espera
+   * o anterior do MESMO período terminar.
+   */
+  private readonly filaPorPeriodo = new Map<number, Promise<unknown>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -196,14 +203,17 @@ export class ComissoesService {
       );
 
       set('Gravando resultado', 85);
-      await this.persistirResultado(periodo.id, resultado);
-      await this.persistirResultadoAtacado(periodo.id, resultadoAtacado);
-      await this.persistirResultadoSupervisorAtacado(periodo.id, resultadoSupervisor);
-
-      await this.prisma.$executeRaw(Prisma.sql`
-        UPDATE dbo.ComissaoPeriodo
-        SET status = 'CALCULADO', data_calculo = GETDATE()
-        WHERE id = ${periodo.id}`);
+      // Persistência na fila do período: não intercala com um recálculo
+      // disparado em paralelo (apaga-e-regrava dos mesmos snapshots).
+      await this.serializadoPorPeriodo(periodo.id, async () => {
+        await this.persistirResultado(periodo.id, resultado);
+        await this.persistirResultadoAtacado(periodo.id, resultadoAtacado);
+        await this.persistirResultadoSupervisorAtacado(periodo.id, resultadoSupervisor);
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE dbo.ComissaoPeriodo
+          SET status = 'CALCULADO', data_calculo = GETDATE()
+          WHERE id = ${periodo.id}`);
+      });
 
       set('Concluído', 100);
       job.status = 'concluido';
@@ -256,6 +266,23 @@ export class ComissoesService {
    * normalmente não vai ao banco de origem, responde rápido com o resultado novo.
    */
   async recalcular(periodoId: number, parametros?: ParametroItemDto[]) {
+    return this.serializadoPorPeriodo(periodoId, () =>
+      this.recalcularInterno(periodoId, parametros),
+    );
+  }
+
+  /** Executa um trabalho na fila do período (um por vez por competência). */
+  private serializadoPorPeriodo<T>(
+    periodoId: number,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const anterior = this.filaPorPeriodo.get(periodoId) ?? Promise.resolve();
+    const execucao = anterior.then(fn, fn); // roda mesmo se o anterior falhou
+    this.filaPorPeriodo.set(periodoId, execucao.catch(() => undefined));
+    return execucao;
+  }
+
+  private async recalcularInterno(periodoId: number, parametros?: ParametroItemDto[]) {
     const periodo = await this.obterPeriodo(periodoId);
     if (periodo.status === 'FECHADO') {
       throw new BadRequestException('Período fechado: reabra para recalcular.');
