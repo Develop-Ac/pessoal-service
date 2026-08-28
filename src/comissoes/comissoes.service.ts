@@ -451,7 +451,8 @@ export class ComissoesService {
       ordem_servico, cli_codigo, cli_nome, pro_codigo, pro_descricao, opf_codigo,
       quantidade, unitario, total_produtos2, desconto, liquido, custo, tipo,
       excluido_ponto, excluido_motivo)`;
-    const LOTE = 100;
+    // 21 colunas/linha: o SQL Server aceita no máx. 2100 parâmetros por lote.
+    const LOTE = 90;
     for (let i = 0; i < movs.length; i += LOTE) {
       const fatia = movs.slice(i, i + LOTE);
       const tuplas = fatia.map(
