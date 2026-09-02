@@ -89,6 +89,12 @@ export interface ParametroManual {
   abatimento_motivo: string | null;
   tem_ferias: boolean;
   dias_ferias: number;
+  /**
+   * Janela de férias (YYYY-MM-DD) — só os SUPERVISORES usam: o movimento
+   * emitido dentro dela sai da base deles. Vendedor usa dias_ferias (média).
+   */
+  ferias_inicio: string | null;
+  ferias_fim: string | null;
   pct_bonus: number;
 }
 
@@ -107,6 +113,9 @@ export interface ConfiguracaoCalculo {
   pontoExclusoes?: Map<number, Map<string, string>>;
   /** dias corridos do período (26 -> 25). */
   diasCorridos: number;
+  /** Limites do período (YYYY-MM-DD) — recortam a janela de férias do supervisor. */
+  periodoIni?: string;
+  periodoFim?: string;
   /** % fixo do técnico (default 0,0175). */
   pctTecnico?: number;
   /** % do supervisor sobre toda a base de serviço (default 0,0065). */
@@ -175,7 +184,13 @@ export interface ResultadoTecnico {
   rep_codigo: number | null;
   nome: string | null;
   is_supervisor: boolean;
+  /** Base após tirar o movimento dos dias de férias (só o supervisor tem). */
   valor_base: number;
+  /** Serviço/OS emitidos na janela de férias do supervisor (fora da base). */
+  excluido_ferias: number;
+  dias_ferias: number;
+  ferias_inicio: string | null;
+  ferias_fim: string | null;
   abatimento: number;
   abatimento_motivo: string | null;
   base_calculo: number;
@@ -285,6 +300,43 @@ const TIPOS_EXCLUIVEIS_PONTO = new Set([TIPO_VENDAS, TIPO_MAO_OBRA]);
 /** Data (YYYY-MM-DD) da emissão em UTC — DATE do banco volta como meia-noite UTC. */
 export function dataYmdUtc(d: Date | null): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
+}
+
+/* --------------------------- Janela de férias ------------------------------ */
+
+/** Janela de férias já recortada ao período, com a contagem de dias. */
+export interface JanelaFerias {
+  inicio: string; // YYYY-MM-DD
+  fim: string; // YYYY-MM-DD
+  dias: number;
+}
+
+/**
+ * Recorta a janela de férias do parâmetro ao período comissional. Devolve null
+ * quando não há férias, faltam datas ou a interseção é vazia. Datas em
+ * YYYY-MM-DD comparam como texto (mesma ordem cronológica).
+ */
+export function janelaFerias(
+  p:
+    | { tem_ferias: boolean; ferias_inicio: string | null; ferias_fim: string | null }
+    | undefined,
+  periodoIni?: string,
+  periodoFim?: string,
+): JanelaFerias | null {
+  if (!p?.tem_ferias || !p.ferias_inicio || !p.ferias_fim) return null;
+  let inicio = p.ferias_inicio.slice(0, 10);
+  let fim = p.ferias_fim.slice(0, 10);
+  if (periodoIni && inicio < periodoIni) inicio = periodoIni;
+  if (periodoFim && fim > periodoFim) fim = periodoFim;
+  if (fim < inicio) return null;
+  const dias =
+    Math.round((Date.parse(`${fim}T00:00:00Z`) - Date.parse(`${inicio}T00:00:00Z`)) / 86400000) + 1;
+  return { inicio, fim, dias };
+}
+
+/** True se a data (YYYY-MM-DD) cai dentro da janela. */
+export function dentroDaJanela(dia: string | null, j: JanelaFerias | null): boolean {
+  return !!j && !!dia && dia >= j.inicio && dia <= j.fim;
 }
 
 /**
@@ -500,8 +552,9 @@ export function agregarVendedores(
  *                       + Σ TOTAL (OS_SERVICOS atribuída ao cod).
  * A OS só é atribuída quando o par (NFS, PRO) NÃO está na consulta de serviço
  * (evita dupla contagem); a atribuição é pelo comissionado da NFS no serviço.
- * Inclui a linha do SUPERVISOR (0,65% sobre TODA a base de serviço) e a linha
- * informativa "SEM APONTAMENTO DE TÉCNICO".
+ * Inclui a linha do SUPERVISOR (0,65% sobre TODA a base de serviço, menos o
+ * que foi emitido nos dias de férias dele) e a linha informativa
+ * "SEM APONTAMENTO DE TÉCNICO".
  */
 export function agregarTecnicos(
   servicos: ServicoCalculado[],
@@ -537,6 +590,7 @@ export function agregarTecnicos(
   // OS atribuída ao técnico (só quando o item não veio no serviço por NFS+PRO).
   const osPorCod = new Map<number, number>();
   let totalOsComComissionado = 0;
+  const osContadas: OsRow[] = [];
   for (const o of os) {
     if (o.nfs == null) continue;
     if (servicoNfsPro.has(`${o.nfs}|${o.pro_codigo}`)) continue; // já contado no serviço
@@ -544,6 +598,7 @@ export function agregarTecnicos(
     if (cod == null) continue; // sem comissionado resolvido -> não entra
     osPorCod.set(cod, (osPorCod.get(cod) ?? 0) + num(o.total));
     totalOsComComissionado += num(o.total);
+    osContadas.push(o);
   }
 
   const baseGeralServico = totalBaseServico + totalOsComComissionado;
@@ -575,6 +630,10 @@ export function agregarTecnicos(
       nome: rep.nome,
       is_supervisor: false,
       valor_base,
+      excluido_ferias: 0,
+      dias_ferias: 0,
+      ferias_inicio: null,
+      ferias_fim: null,
       abatimento,
       abatimento_motivo,
       base_calculo,
@@ -595,13 +654,32 @@ export function agregarTecnicos(
   if (supervisor) {
     const p = cfg.parametros.get(supervisor.rep_codigo);
     const abatimento = num(p?.abatimento);
-    const base_calculo = baseGeralServico - abatimento;
+
+    // Férias do supervisor: o serviço/OS emitido dentro da janela sai da base
+    // dele (a oficina continua girando sem ele). Sem média — o % é fixo.
+    const ferias = janelaFerias(p, cfg.periodoIni, cfg.periodoFim);
+    let excluido_ferias = 0;
+    if (ferias) {
+      for (const s of servicos) {
+        if (dentroDaJanela(dataYmdUtc(s.dt_emissao), ferias)) excluido_ferias += s.base_comissao;
+      }
+      for (const o of osContadas) {
+        if (dentroDaJanela(dataYmdUtc(o.dt_emissao), ferias)) excluido_ferias += num(o.total);
+      }
+    }
+
+    const valor_base = baseGeralServico - excluido_ferias;
+    const base_calculo = valor_base - abatimento;
     const valor_comissao = base_calculo * pctSupervisor;
     resultado.push({
       rep_codigo: supervisor.rep_codigo,
       nome: supervisor.nome,
       is_supervisor: true,
-      valor_base: baseGeralServico,
+      valor_base,
+      excluido_ferias,
+      dias_ferias: ferias?.dias ?? 0,
+      ferias_inicio: ferias?.inicio ?? null,
+      ferias_fim: ferias?.fim ?? null,
       abatimento,
       abatimento_motivo: motivo(p, abatimento),
       base_calculo,
@@ -619,6 +697,10 @@ export function agregarTecnicos(
     nome: 'SEM APONTAMENTO DE TÉCNICO',
     is_supervisor: false,
     valor_base: baseGeralServico - somaBaseTecnicos,
+    excluido_ferias: 0,
+    dias_ferias: 0,
+    ferias_inicio: null,
+    ferias_fim: null,
     abatimento: 0,
     abatimento_motivo: null,
     base_calculo: 0,

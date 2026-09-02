@@ -63,6 +63,20 @@ export class AtualizarParametroDto {
   @Max(31)
   dias_ferias?: number;
 
+  @ApiPropertyOptional({
+    example: '2026-08-01',
+    description:
+      'Início das férias (AAAA-MM-DD) — supervisores: o movimento dos dias da janela sai da base',
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'ferias_inicio deve ser AAAA-MM-DD' })
+  ferias_inicio?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Fim das férias (AAAA-MM-DD)' })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'ferias_fim deve ser AAAA-MM-DD' })
+  ferias_fim?: string;
+
   @ApiPropertyOptional({ example: 0.0075, description: '% de bônus do técnico (ex.: 0.0075)' })
   @IsOptional()
   @Type(() => Number)

@@ -7,7 +7,10 @@
    atacado (a soma de todos os vendedores juntos), com uma tabela de alíquota
    PRÓPRIA e FIXA (card 420), sem média de férias:
 
-     - base = Σ liquido_produto de todas as células (mix x faixa) do canal;
+     - base = Σ liquido_produto de todas as células (mix x faixa) do canal,
+       MENOS o que o canal vendeu nos dias de férias do supervisor (o canal
+       continua vendendo sem ele; esses dias saem da base — e como o % é fixo,
+       não há média projetada como no vendedor);
      - atingiu_meta = (Σ mix 1 / base) >= 0,30;
      - mix 2/3: alíquota FIXA de 0,55%;
      - mix 1: % FIXO por faixa A/B/C/D, com uma tabela "abaixo" e outra "atingiu";
@@ -24,6 +27,7 @@
    ============================================================================= */
 
 import { CelulaAtacado } from './atacado-engine';
+import { JanelaFerias } from './calculo-engine';
 
 /* ----------------------------- Tabela do card 420 -------------------------- */
 
@@ -77,6 +81,11 @@ export interface ResumoSupervisorAtacado {
   atingiu_meta: boolean;
   /** Alíquota fixa do mix 2/3 (informativa). */
   pct_mix23: number;
+  /** Venda do canal nos dias de férias do supervisor (fora de total_vendido). */
+  excluido_ferias: number;
+  dias_ferias: number;
+  ferias_inicio: string | null;
+  ferias_fim: string | null;
   abatimento: number;
   abatimento_motivo: string | null;
   /** total_vendido − abatimento. */
@@ -93,6 +102,13 @@ export interface ResumoSupervisorAtacado {
 export interface ParametroSupervisorAtacado {
   abatimento: number;
   abatimento_motivo: string | null;
+  /** Janela de férias já recortada ao período (null = sem férias). */
+  ferias?: JanelaFerias | null;
+  /**
+   * Células do canal SÓ dos dias da janela de férias (mesma leitura de
+   * lerCelulas, restrita a ferias.inicio..fim). São subtraídas do canal.
+   */
+  celulasFerias?: CelulaAtacado[];
 }
 
 export interface ResultadoSupervisorAtacado {
@@ -124,23 +140,31 @@ export function calcularSupervisorAtacado(
   metaMix1: number = SUP_META_MIX1,
   parametro?: ParametroSupervisorAtacado,
 ): ResultadoSupervisorAtacado {
-  // Agrega o canal inteiro por (mix, faixa).
+  // Agrega o canal inteiro por (mix, faixa). As células dos dias de férias do
+  // supervisor entram com sinal trocado: o que o canal vendeu sem ele sai da
+  // base (célula a célula, para a participação do mix 1 também refletir só os
+  // dias trabalhados).
+  const ferias = parametro?.ferias ?? null;
+  const celulasFerias = ferias ? (parametro?.celulasFerias ?? []) : [];
   const porCelula = new Map<string, DetalheSupervisorAtacado>();
-  for (const c of celulas) {
+  const somar = (c: CelulaAtacado, sinal: 1 | -1) => {
     const mix = num(c.mix);
     const faixa = (c.faixa ?? '').toUpperCase();
     const k = `${mix}|${faixa}`;
     const acc = porCelula.get(k);
-    if (acc) acc.valor_vendido += num(c.valor_vendido);
+    if (acc) acc.valor_vendido += sinal * num(c.valor_vendido);
     else
       porCelula.set(k, {
         mix,
         faixa,
-        valor_vendido: num(c.valor_vendido),
+        valor_vendido: sinal * num(c.valor_vendido),
         pct_comissao: 0,
         valor_comissao: 0,
       });
-  }
+  };
+  for (const c of celulas) somar(c, 1);
+  for (const c of celulasFerias) somar(c, -1);
+  const excluido_ferias = celulasFerias.reduce((s, c) => s + num(c.valor_vendido), 0);
 
   const detalhe = [...porCelula.values()];
   const total_vendido = detalhe.reduce((s, d) => s + d.valor_vendido, 0);
@@ -174,6 +198,10 @@ export function calcularSupervisorAtacado(
       pct_mix1,
       atingiu_meta,
       pct_mix23: SUP_PCT_MIX23,
+      excluido_ferias,
+      dias_ferias: ferias?.dias ?? 0,
+      ferias_inicio: ferias?.inicio ?? null,
+      ferias_fim: ferias?.fim ?? null,
       abatimento,
       abatimento_motivo: abatimento
         ? ((parametro?.abatimento_motivo ?? '').trim() || null)

@@ -19,6 +19,9 @@ import {
   ServicoRow,
   VendaRow,
   calcular,
+  dataYmdUtc,
+  dentroDaJanela,
+  janelaFerias,
 } from './calculo-engine';
 import {
   CelulaAtacado,
@@ -169,7 +172,7 @@ export class ComissoesService {
       const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
 
       set('Carregando configuração', 5);
-      const cfg = await this.carregarConfiguracao(periodo.id, periodo.dias_corridos);
+      const cfg = await this.carregarConfiguracao(periodo);
 
       set('Lendo VENDAS do Firebird', 20);
       const vendas = await this.firebird.lerVendas(dataIniYmd, dataFimYmd);
@@ -198,8 +201,9 @@ export class ComissoesService {
       );
       const resultadoAtacado = calcularAtacado(atacadoCelulas, cfgAtacado);
       const resultadoSupervisor = await this.calcularSupervisorAtacado(
-        periodo.id,
+        periodo,
         atacadoCelulas,
+        repsAtacado,
       );
 
       set('Gravando resultado', 85);
@@ -309,13 +313,14 @@ export class ComissoesService {
       fonte = 'firebird';
     }
 
-    const cfg = await this.carregarConfiguracao(periodoId, periodo.dias_corridos);
+    const cfg = await this.carregarConfiguracao(periodo);
     const resultado = calcular(mov.vendas, mov.servicos, mov.os, cfg);
     const cfgAtacado = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
     const resultadoAtacado = calcularAtacado(mov.atacado, cfgAtacado);
     const resultadoSupervisor = await this.calcularSupervisorAtacado(
-      periodoId,
+      periodo,
       mov.atacado,
+      await this.listarRepsAtacado(),
     );
     await this.persistirResultado(periodoId, resultado);
     await this.persistirResultadoAtacado(periodoId, resultadoAtacado);
@@ -331,10 +336,15 @@ export class ComissoesService {
   }
 
   /** Carrega config + parâmetros + cadastro para o engine. */
-  private async carregarConfiguracao(
-    periodoId: number,
-    diasCorridos: number,
-  ): Promise<ConfiguracaoCalculo> {
+  private async carregarConfiguracao(periodo: {
+    id: number;
+    ano: number;
+    mes: number;
+    dias_corridos: number;
+  }): Promise<ConfiguracaoCalculo> {
+    const periodoId = Number(periodo.id);
+    const diasCorridos = Number(periodo.dias_corridos);
+    const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
     const reps = await this.prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT rep_codigo, nome, calcula_comissao, inativo, especial, local_venda, papel
       FROM dbo.ComissaoRepresentante`);
@@ -367,8 +377,11 @@ export class ComissoesService {
     const tipoProduto = new Map<number, string>();
     for (const t of tipoRows) tipoProduto.set(Number(t.pro_codigo), t.tipo);
 
+    // Datas de férias em varchar (CONVERT 23) para não deslocar o dia no fuso.
     const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT rep_codigo, abatimento, abatimento_motivo, tem_ferias, dias_ferias, pct_bonus
+      SELECT rep_codigo, abatimento, abatimento_motivo, tem_ferias, dias_ferias, pct_bonus,
+             CONVERT(varchar(10), ferias_inicio, 23) AS ferias_inicio,
+             CONVERT(varchar(10), ferias_fim, 23)    AS ferias_fim
       FROM dbo.ComissaoParametroManual WHERE periodo_id = ${periodoId}`);
     const parametros = new Map<number, ParametroManual>();
     for (const p of paramRows) {
@@ -378,13 +391,24 @@ export class ComissoesService {
         abatimento_motivo: p.abatimento_motivo ?? null,
         tem_ferias: !!p.tem_ferias,
         dias_ferias: Number(p.dias_ferias),
+        ferias_inicio: p.ferias_inicio ?? null,
+        ferias_fim: p.ferias_fim ?? null,
         pct_bonus: Number(p.pct_bonus),
       });
     }
 
     const pontoExclusoes = await this.carregarPontoExclusoes(periodoId);
 
-    return { tipoProduto, faixas, representantes, parametros, pontoExclusoes, diasCorridos };
+    return {
+      tipoProduto,
+      faixas,
+      representantes,
+      parametros,
+      pontoExclusoes,
+      diasCorridos,
+      periodoIni: dataIniYmd,
+      periodoFim: dataFimYmd,
+    };
   }
 
   /** Dias de FALTA/DISPENSA do cartão ponto: rep -> (YYYY-MM-DD -> motivo). */
@@ -441,12 +465,14 @@ export class ComissoesService {
     for (const t of r.tecnicos) {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoTecnico
-          (periodo_id, rep_codigo, nome, is_supervisor, valor_base, abatimento,
+          (periodo_id, rep_codigo, nome, is_supervisor, valor_base, excluido_ferias,
+           dias_ferias, ferias_inicio, ferias_fim, abatimento,
            abatimento_motivo, base_calculo,
            percentual, valor_comissao, pct_bonus, valor_bonus, total)
         VALUES
           (${periodoId}, ${t.rep_codigo}, ${t.nome}, ${t.is_supervisor},
-           ${round2(t.valor_base)}, ${round2(t.abatimento)},
+           ${round2(t.valor_base)}, ${round2(t.excluido_ferias)}, ${t.dias_ferias},
+           ${vdate(t.ferias_inicio)}, ${vdate(t.ferias_fim)}, ${round2(t.abatimento)},
            ${t.abatimento_motivo}, ${round2(t.base_calculo)},
            ${round6(t.percentual)}, ${round2(t.valor_comissao)}, ${round6(t.pct_bonus)},
            ${round2(t.valor_bonus)}, ${round2(t.total)})`);
@@ -529,12 +555,42 @@ export class ComissoesService {
     const filtroRep = ehSupervisor
       ? Prisma.empty
       : Prisma.sql`AND rep_codigo = ${repCodigo}`;
-    return this.prisma.$queryRaw(Prisma.sql`
+    const linhas = await this.prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT nfs, nota_fiscal, dt_emissao, cli_nome, pro_codigo, pro_descricao,
              quantidade, unitario, total_produtos2, desconto, liquido
       FROM dbo.ComissaoMovimento
       WHERE periodo_id = ${periodoId} AND origem = 'SERVICO' ${filtroRep}
       ORDER BY dt_emissao, nfs`);
+    if (!ehSupervisor) return linhas;
+
+    // Supervisor de férias: o serviço emitido na janela saiu da base dele.
+    // A linha do movimento é compartilhada com os técnicos, então a marcação
+    // é feita aqui (só no relatório do supervisor), a partir do snapshot.
+    const ferias = await this.janelaFeriasSupervisorOficina(periodoId);
+    return linhas.map((l) => {
+      const excluido = dentroDaJanela(dataYmdUtc(l.dt_emissao ?? null), ferias);
+      return {
+        ...l,
+        excluido_ponto: excluido,
+        excluido_motivo: excluido ? 'FERIAS' : null,
+      };
+    });
+  }
+
+  /** Janela de férias gravada no snapshot do supervisor da oficina (ou null). */
+  private async janelaFeriasSupervisorOficina(periodoId: number) {
+    const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT CONVERT(varchar(10), ferias_inicio, 23) AS ferias_inicio,
+             CONVERT(varchar(10), ferias_fim, 23)    AS ferias_fim
+      FROM dbo.ComissaoResultadoTecnico
+      WHERE periodo_id = ${periodoId} AND is_supervisor = 1`);
+    const r = rows[0];
+    if (!r?.ferias_inicio || !r?.ferias_fim) return null;
+    return janelaFerias({
+      tem_ferias: true,
+      ferias_inicio: String(r.ferias_inicio),
+      ferias_fim: String(r.ferias_fim),
+    });
   }
 
   /** True se o rep é o supervisor da oficina (papel='SUPERVISOR'). */
@@ -551,7 +607,9 @@ export class ComissoesService {
     await this.obterPeriodo(periodoId);
     return this.prisma.$queryRaw(Prisma.sql`
       SELECT p.rep_codigo, r.nome, r.papel, p.abatimento, p.abatimento_motivo,
-             p.tem_ferias, p.dias_ferias, p.pct_bonus, p.data_atualizacao
+             p.tem_ferias, p.dias_ferias, p.pct_bonus, p.data_atualizacao,
+             CONVERT(varchar(10), p.ferias_inicio, 23) AS ferias_inicio,
+             CONVERT(varchar(10), p.ferias_fim, 23)    AS ferias_fim
       FROM dbo.ComissaoParametroManual p
       LEFT JOIN dbo.ComissaoRepresentante r ON r.rep_codigo = p.rep_codigo
       WHERE p.periodo_id = ${periodoId}
@@ -565,6 +623,21 @@ export class ComissoesService {
     dto: AtualizarParametroDto,
   ) {
     await this.obterPeriodo(periodoId);
+    // Janela de férias (supervisores): só é guardada com férias marcadas e as
+    // duas datas informadas; fim antes do início é erro de digitação.
+    const temFerias = dto.tem_ferias ?? false;
+    const feriasIni = temFerias ? (dto.ferias_inicio ?? null) : null;
+    const feriasFim = temFerias ? (dto.ferias_fim ?? null) : null;
+    if ((feriasIni && !feriasFim) || (!feriasIni && feriasFim)) {
+      throw new BadRequestException(
+        `Rep ${repCodigo}: informe início E fim das férias.`,
+      );
+    }
+    if (feriasIni && feriasFim && feriasFim < feriasIni) {
+      throw new BadRequestException(
+        `Rep ${repCodigo}: o fim das férias (${feriasFim}) é anterior ao início (${feriasIni}).`,
+      );
+    }
     await this.prisma.$executeRaw(Prisma.sql`
       MERGE dbo.ComissaoParametroManual AS alvo
       USING (SELECT ${periodoId} AS periodo_id, ${repCodigo} AS rep_codigo) AS fonte
@@ -572,15 +645,18 @@ export class ComissoesService {
       WHEN MATCHED THEN UPDATE SET
         abatimento  = ${dto.abatimento ?? 0},
         abatimento_motivo = ${motivoAbatimento(dto)},
-        tem_ferias  = ${dto.tem_ferias ?? false},
+        tem_ferias  = ${temFerias},
         dias_ferias = ${dto.dias_ferias ?? 0},
+        ferias_inicio = ${vdate(feriasIni)},
+        ferias_fim    = ${vdate(feriasFim)},
         pct_bonus   = ${dto.pct_bonus ?? 0},
         data_atualizacao = GETDATE()
       WHEN NOT MATCHED THEN
         INSERT (periodo_id, rep_codigo, abatimento, abatimento_motivo, tem_ferias,
-                dias_ferias, pct_bonus)
+                dias_ferias, ferias_inicio, ferias_fim, pct_bonus)
         VALUES (${periodoId}, ${repCodigo}, ${dto.abatimento ?? 0}, ${motivoAbatimento(dto)},
-                ${dto.tem_ferias ?? false}, ${dto.dias_ferias ?? 0}, ${dto.pct_bonus ?? 0});`);
+                ${temFerias}, ${dto.dias_ferias ?? 0}, ${vdate(feriasIni)}, ${vdate(feriasFim)},
+                ${dto.pct_bonus ?? 0});`);
     return { ok: true };
   }
 
@@ -1038,9 +1114,11 @@ export class ComissoesService {
    * o abatimento vem dos parâmetros manuais do período (proporcional).
    */
   private async calcularSupervisorAtacado(
-    periodoId: number,
+    periodo: { id: number; ano: number; mes: number },
     celulas: CelulaAtacado[],
+    repsAtacado: number[],
   ): Promise<ResultadoSupervisorAtacado | null> {
+    const periodoId = Number(periodo.id);
     const rep = await this.obterSupervisorAtacadoRep();
     if (!rep) return null;
     const metaRows = await this.prisma.$queryRaw<any[]>(
@@ -1048,15 +1126,36 @@ export class ComissoesService {
     );
     const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : undefined;
     const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT abatimento, abatimento_motivo FROM dbo.ComissaoParametroManual
+      SELECT abatimento, abatimento_motivo, tem_ferias,
+             CONVERT(varchar(10), ferias_inicio, 23) AS ferias_inicio,
+             CONVERT(varchar(10), ferias_fim, 23)    AS ferias_fim
+      FROM dbo.ComissaoParametroManual
       WHERE periodo_id = ${periodoId} AND rep_codigo = ${rep.rep_codigo}`);
-    const parametro = paramRows.length
-      ? {
-          abatimento: Number(paramRows[0].abatimento),
-          abatimento_motivo: paramRows[0].abatimento_motivo ?? null,
-        }
-      : undefined;
-    return calcularSupervisorAtacado(celulas, rep, metaMix1, parametro);
+    if (!paramRows.length) return calcularSupervisorAtacado(celulas, rep, metaMix1);
+
+    const p = paramRows[0];
+    // Férias do supervisor: relê SÓ a janela no BI (mesma consulta das células)
+    // e o engine subtrai do canal. É uma leitura local ao SQL Server, então não
+    // invalida o cache do movimento (que continua sendo o período inteiro).
+    const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
+    const ferias = janelaFerias(
+      {
+        tem_ferias: !!p.tem_ferias,
+        ferias_inicio: p.ferias_inicio ?? null,
+        ferias_fim: p.ferias_fim ?? null,
+      },
+      dataIniYmd,
+      dataFimYmd,
+    );
+    const celulasFerias = ferias
+      ? await this.atacado.lerCelulas(ferias.inicio, ferias.fim, repsAtacado)
+      : [];
+    return calcularSupervisorAtacado(celulas, rep, metaMix1, {
+      abatimento: Number(p.abatimento),
+      abatimento_motivo: p.abatimento_motivo ?? null,
+      ferias,
+      celulasFerias,
+    });
   }
 
   /** Grava o snapshot do supervisor do atacado (apaga e regrava o período). */
@@ -1076,12 +1175,15 @@ export class ComissoesService {
     await this.prisma.$executeRaw(Prisma.sql`
       INSERT INTO dbo.ComissaoResultadoSupervisorAtacado
         (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1,
-         atingiu_meta, pct_mix23, abatimento, abatimento_motivo, base_real,
+         atingiu_meta, pct_mix23, excluido_ferias, dias_ferias, ferias_inicio, ferias_fim,
+         abatimento, abatimento_motivo, base_real,
          comissao_bruta, fator_abatimento, comissao_total)
       VALUES
         (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
          ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
-         ${round6(v.pct_mix23)}, ${round2(v.abatimento)}, ${v.abatimento_motivo},
+         ${round6(v.pct_mix23)}, ${round2(v.excluido_ferias)}, ${v.dias_ferias},
+         ${vdate(v.ferias_inicio)}, ${vdate(v.ferias_fim)},
+         ${round2(v.abatimento)}, ${v.abatimento_motivo},
          ${round2(v.base_real)}, ${round2(v.comissao_bruta)},
          ${round6(v.fator_abatimento)}, ${round2(v.comissao_total)})`);
 
@@ -1123,7 +1225,14 @@ export class ComissoesService {
     if (!s) return { resumo: null, detalhe: [], itens: [] };
 
     // Espelha a forma do ResultadoAtacado consumido pela tela/impressão.
-    // (o supervisor não tem férias; abatimento ele tem, proporcional como o vendedor)
+    // Férias do supervisor = janela de datas cujo movimento saiu da base
+    // (excluido_ferias); não há média (media_ferias fica 0, o % é fixo).
+    const feriasIni = s.ferias_inicio ? dataYmdUtc(new Date(s.ferias_inicio)) : null;
+    const feriasFim = s.ferias_fim ? dataYmdUtc(new Date(s.ferias_fim)) : null;
+    const ferias =
+      feriasIni && feriasFim
+        ? janelaFerias({ tem_ferias: true, ferias_inicio: feriasIni, ferias_fim: feriasFim })
+        : null;
     const resumo = {
       rep_codigo: Number(s.rep_codigo),
       nome: s.nome ?? null,
@@ -1134,8 +1243,11 @@ export class ComissoesService {
       abatimento: Number(s.abatimento ?? 0),
       abatimento_motivo: s.abatimento_motivo ?? null,
       base_real: Number(s.base_real ?? s.total_vendido),
-      dias_ferias: 0,
+      dias_ferias: Number(s.dias_ferias ?? 0),
       media_ferias: 0,
+      excluido_ferias: Number(s.excluido_ferias ?? 0),
+      ferias_inicio: ferias?.inicio ?? null,
+      ferias_fim: ferias?.fim ?? null,
       total_faixa: Number(s.total_vendido),
       pct_mix23: Number(s.pct_mix23),
       comissao_bruta: Number(s.comissao_bruta ?? s.comissao_total),
@@ -1155,7 +1267,10 @@ export class ComissoesService {
     const atingiuMeta = !!s.atingiu_meta;
     const raw = await this.atacado.lerItensCanal(dataIniYmd, dataFimYmd, repsAtacado);
     const itens = raw.map((it) => {
-      const pct = pctSupervisorAtacado(it.mix, it.faixa, atingiuMeta);
+      // Item emitido nos dias de férias do supervisor: fica na relação (é venda
+      // do canal), mas não comissiona — sai carimbado para o demonstrativo.
+      const excluido_ferias = dentroDaJanela(it.dt_emissao, ferias);
+      const pct = excluido_ferias ? 0 : pctSupervisorAtacado(it.mix, it.faixa, atingiuMeta);
       return {
         dt_emissao: it.dt_emissao,
         cli_codigo: it.cli_codigo,
@@ -1167,6 +1282,7 @@ export class ComissoesService {
         faixa: it.faixa,
         pct_comissao: round6(pct),
         valor_comissao: round2(it.liquido_produto * pct),
+        excluido_ferias,
       };
     });
 
@@ -1294,6 +1410,13 @@ function motivoAbatimento(dto: AtualizarParametroDto): string | null {
   if (!num(dto.abatimento)) return null;
   const t = (dto.abatimento_motivo ?? '').trim();
   return t === '' ? null : t.slice(0, 200);
+}
+/**
+ * Data 'AAAA-MM-DD' (ou null) para coluna DATE. Vai como varchar: o driver tipa
+ * NULL como int, e int não converte para date (erro 206) — varchar converte.
+ */
+function vdate(v: string | null | undefined): Prisma.Sql {
+  return Prisma.sql`CAST(${v ?? null} AS varchar(10))`;
 }
 function round2(v: number): number {
   return Math.round((num(v) + Number.EPSILON) * 100) / 100;
