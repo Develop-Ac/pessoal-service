@@ -9,6 +9,7 @@ import { ColaboradoresModule } from './colaboradores/colaboradores.module';
 import { ImportacaoFolhaModule } from './importacao-folha/importacao-folha.module';
 import { RateioModule } from './rateio/rateio.module';
 import { ComissoesModule } from './comissoes/comissoes.module';
+import { PaineisModule } from './paineis/paineis.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ComissoesModule } from './comissoes/comissoes.module';
     ImportacaoFolhaModule,
     RateioModule,
     ComissoesModule,
+    PaineisModule,
 
     PrometheusModule.register({
       defaultMetrics: { enabled: true }, // CPU, memória, event loop, GC

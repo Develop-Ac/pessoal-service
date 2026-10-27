@@ -1,0 +1,672 @@
+[
+  {
+    "dashcard": 535,
+    "card": 497,
+    "arquivo": "497-custo-medio-por-colaborador.sql",
+    "titulo": "Custo Médio Por Colaborador",
+    "display": "smartscalar",
+    "row": 7,
+    "col": 0,
+    "size_x": 5,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "scalar.switch_positive_negative": true,
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 537,
+    "card": 499,
+    "arquivo": "499-receita-por-colaborador.sql",
+    "titulo": "Receita Por Colaborador",
+    "display": "smartscalar",
+    "row": 7,
+    "col": 9,
+    "size_x": 5,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 542,
+    "card": 504,
+    "arquivo": "504-custo-de-pessoal-por-dia-util.sql",
+    "titulo": "Custo de Pessoal Por Dia Útil",
+    "display": "smartscalar",
+    "row": 7,
+    "col": 14,
+    "size_x": 5,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "scalar.switch_positive_negative": true,
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 540,
+    "card": 502,
+    "arquivo": "502-custo-de-pessoal-por-ticket.sql",
+    "titulo": "Custo de Pessoal por Ticket",
+    "display": "smartscalar",
+    "row": 10,
+    "col": 12,
+    "size_x": 4,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "scalar.switch_positive_negative": true,
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 532,
+    "card": 494,
+    "arquivo": "494-pro-labore-retiradas.sql",
+    "titulo": "Pro-Labore / Retiradas",
+    "display": "smartscalar",
+    "row": 7,
+    "col": 19,
+    "size_x": 5,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 536,
+    "card": 498,
+    "arquivo": "498-custo-medio-de-pessoal-s-faturamento.sql",
+    "titulo": "% Custo médio de Pessoal S/ Faturamento",
+    "display": "smartscalar",
+    "row": 7,
+    "col": 5,
+    "size_x": 4,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "scalar.switch_positive_negative": true,
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "percent",
+          "decimals": 1
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 538,
+    "card": 500,
+    "arquivo": "500-indice-de-eficiencia-de-folha.sql",
+    "titulo": "Indice de Eficiência de Folha",
+    "display": "smartscalar",
+    "row": 13,
+    "col": 12,
+    "size_x": 4,
+    "size_y": 3,
+    "visualization_settings": {
+      "scalar.field": "valor",
+      "column_settings": {
+        "[\"name\",\"valor\"]": {
+          "number_style": "currency",
+          "currency": "BRL",
+          "currency_style": "symbol",
+          "decimals": 0
+        }
+      }
+    },
+    "cols": [
+      {
+        "name": "periodo",
+        "display_name": "periodo",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 533,
+    "card": 495,
+    "arquivo": "495-despesas-com-pessoal.sql",
+    "titulo": "Despesas com Pessoal",
+    "display": "combo",
+    "row": 1,
+    "col": 0,
+    "size_x": 15,
+    "size_y": 6,
+    "visualization_settings": {
+      "table.cell_column": "despesa_com_pessoal",
+      "graph.series_order_dimension": "LOCAL_VENDA",
+      "graph.metrics": [
+        "despesa_com_pessoal"
+      ],
+      "graph.series_order": [
+        {
+          "key": "VAREJO",
+          "color": "#F2A86F",
+          "enabled": true,
+          "name": "VAREJO"
+        },
+        {
+          "key": "ATACADO",
+          "color": "#7172AD",
+          "enabled": true,
+          "name": "ATACADO"
+        },
+        {
+          "key": "VAREJO-SERVIÇO",
+          "color": "#88BF4D",
+          "enabled": true,
+          "name": "VAREJO-SERVIÇO"
+        }
+      ],
+      "table.pivot_column": "competencia",
+      "series_settings": {
+        "VAREJO-SERVIÇO": {
+          "color": "#ED8535"
+        },
+        "VAREJO": {
+          "color": "#689636"
+        },
+        "ATACADO": {
+          "display": "bar",
+          "color": "#227FD2"
+        }
+      },
+      "graph.x_axis.scale": "timeseries",
+      "graph.dimensions": [
+        "competencia",
+        "LOCAL_VENDA"
+      ],
+      "stackable.stack_type": "stacked"
+    },
+    "cols": [
+      {
+        "name": "competencia",
+        "display_name": "competencia",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "LOCAL_VENDA",
+        "display_name": "LOCAL_VENDA",
+        "base_type": "type/Text"
+      },
+      {
+        "name": "despesa_com_pessoal",
+        "display_name": "despesa_com_pessoal",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 531,
+    "card": 493,
+    "arquivo": "493-despesa-com-pessoal-por-conta.sql",
+    "titulo": "Despesa Com Pessoal por Conta",
+    "display": "pie",
+    "row": 1,
+    "col": 15,
+    "size_x": 9,
+    "size_y": 6,
+    "visualization_settings": {
+      "table.pivot_column": "DESCRICAO_ANALITICA_DRE",
+      "table.cell_column": "valor",
+      "pie.rows": [
+        {
+          "key": "FERRAMENTAS - EMPREGADOS",
+          "name": "FERRAMENTAS - EMPREGADOS",
+          "originalName": "FERRAMENTAS - EMPREGADOS",
+          "color": "#509EE3",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "EPI - EQUIP. DE PROTECAO INDIVIDUAL",
+          "name": "EPI - EQUIP. DE PROTECAO INDIVIDUAL",
+          "originalName": "EPI - EQUIP. DE PROTECAO INDIVIDUAL",
+          "color": "#227FD2",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "MEDICINA E SEGURANCA DO TRABALHO",
+          "name": "MEDICINA E SEGURANCA DO TRABALHO",
+          "originalName": "MEDICINA E SEGURANCA DO TRABALHO",
+          "color": "#88BF4D",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "UNIFORMES E VESTUARIOS",
+          "name": "UNIFORMES E VESTUARIOS",
+          "originalName": "UNIFORMES E VESTUARIOS",
+          "color": "#689636",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "CURSOS E TREINAMENTOS",
+          "name": "CURSOS E TREINAMENTOS",
+          "originalName": "CURSOS E TREINAMENTOS",
+          "color": "#A989C5",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "EVENTOS E CONFRATERNIZACOES",
+          "name": "EVENTOS E CONFRATERNIZACOES",
+          "originalName": "EVENTOS E CONFRATERNIZACOES",
+          "color": "#8A5EB0",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "SEGURO DE VIDA",
+          "name": "SEGURO DE VIDA",
+          "originalName": "SEGURO DE VIDA",
+          "color": "#EF8C8C",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "EXAMES MÉDICOS",
+          "name": "EXAMES MÉDICOS",
+          "originalName": "EXAMES MÉDICOS",
+          "color": "#E75454",
+          "defaultColor": true,
+          "enabled": true,
+          "hidden": false,
+          "isOther": true
+        },
+        {
+          "key": "RESCISOES",
+          "name": "RESCISOES",
+          "originalName": "RESCISOES",
+          "color": "#51528D",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "FÉRIAS",
+          "name": "FÉRIAS",
+          "originalName": "FÉRIAS",
+          "color": "#F7C41F",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "13º SALÁRIO",
+          "name": "13º SALÁRIO",
+          "originalName": "13º SALÁRIO",
+          "color": "#8A5EB0",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "INSS",
+          "name": "INSS",
+          "originalName": "INSS",
+          "color": "#DCDFE0",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "FGTS",
+          "name": "FGTS",
+          "originalName": "FGTS",
+          "color": "#E75454",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "VALE ALIMENTACAO - PAT",
+          "name": "VALE ALIMENTACAO - PAT",
+          "originalName": "VALE ALIMENTACAO - PAT",
+          "color": "#69C8C8",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "SIMPLES S/FATURAMENTO",
+          "name": "SIMPLES S/FATURAMENTO",
+          "originalName": "SIMPLES S/FATURAMENTO",
+          "color": "#227FD2",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        },
+        {
+          "key": "SALÁRIOS E ORDENADOS",
+          "name": "SALÁRIOS E ORDENADOS",
+          "originalName": "SALÁRIOS E ORDENADOS",
+          "color": "#689636",
+          "defaultColor": false,
+          "enabled": true,
+          "hidden": false,
+          "isOther": false
+        }
+      ],
+      "pie.dimension": [
+        "DESCRICAO_ANALITICA_DRE"
+      ]
+    },
+    "cols": [
+      {
+        "name": "DESCRICAO_ANALITICA_DRE",
+        "display_name": "DESCRICAO_ANALITICA_DRE",
+        "base_type": "type/Text"
+      },
+      {
+        "name": "valor",
+        "display_name": "valor",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 539,
+    "card": 501,
+    "arquivo": "501-qtde-de-colaboradores.sql",
+    "titulo": "Qtde de Colaboradores",
+    "display": "combo",
+    "row": 10,
+    "col": 0,
+    "size_x": 12,
+    "size_y": 6,
+    "visualization_settings": {
+      "graph.y_axis.title_text": "Qtde Colaboradores",
+      "graph.show_values": true,
+      "graph.series_order_dimension": "LOCAL_VENDA",
+      "graph.x_axis.axis_enabled": "compact",
+      "graph.x_axis.title_text": "Mês",
+      "graph.y_axis.labels_enabled": true,
+      "graph.y_axis.auto_split": true,
+      "graph.label_value_frequency": "all",
+      "graph.metrics": [
+        "headcount_equivalente"
+      ],
+      "graph.y_axis.axis_enabled": false,
+      "graph.series_order": [
+        {
+          "key": "VAREJO",
+          "color": "#F2A86F",
+          "enabled": true,
+          "name": "VAREJO"
+        },
+        {
+          "key": "ATACADO",
+          "color": "#227FD2",
+          "enabled": true,
+          "name": "ATACADO"
+        },
+        {
+          "key": "VAREJO-SERVIÇO",
+          "color": "#88BF4D",
+          "enabled": true,
+          "name": "VAREJO-SERVIÇO"
+        }
+      ],
+      "series_settings": {
+        "VAREJO": {
+          "color": "#689636"
+        },
+        "ATACADO": {
+          "display": "bar",
+          "color": "#227FD2"
+        },
+        "VAREJO-SERVIÇO": {
+          "color": "#ED8535"
+        }
+      },
+      "graph.y_axis.auto_range": true,
+      "graph.x_axis.scale": "timeseries",
+      "graph.dimensions": [
+        "DATA_COMPETENCIA",
+        "LOCAL_VENDA"
+      ],
+      "stackable.stack_type": "stacked"
+    },
+    "cols": [
+      {
+        "name": "DATA_COMPETENCIA",
+        "display_name": "DATA_COMPETENCIA",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "ANO",
+        "display_name": "ANO",
+        "base_type": "type/Integer"
+      },
+      {
+        "name": "MES",
+        "display_name": "MES",
+        "base_type": "type/Integer"
+      },
+      {
+        "name": "LOCAL_VENDA",
+        "display_name": "LOCAL_VENDA",
+        "base_type": "type/Text"
+      },
+      {
+        "name": "headcount_equivalente",
+        "display_name": "headcount_equivalente",
+        "base_type": "type/Decimal"
+      }
+    ]
+  },
+  {
+    "dashcard": 541,
+    "card": 503,
+    "arquivo": "503-crescimento-de-receita-x-folha.sql",
+    "titulo": "Crescimento de Receita x Folha",
+    "display": "combo",
+    "row": 10,
+    "col": 16,
+    "size_x": 8,
+    "size_y": 6,
+    "visualization_settings": {
+      "series_settings": {
+        "crescimento_receita": {
+          "color": "#227FD2",
+          "line.interpolate": "cardinal",
+          "line.size": "L",
+          "title": "Crescimento Receita"
+        },
+        "crescimento_folha": {
+          "display": "line",
+          "color": "#E75454",
+          "line.interpolate": "cardinal",
+          "line.size": "L",
+          "title": "Crescimento Folha"
+        }
+      },
+      "graph.dimensions": [
+        "competencia"
+      ],
+      "graph.x_axis.scale": "timeseries",
+      "graph.metrics": [
+        "crescimento_receita",
+        "crescimento_folha"
+      ]
+    },
+    "cols": [
+      {
+        "name": "competencia",
+        "display_name": "competencia",
+        "base_type": "type/Date"
+      },
+      {
+        "name": "receita_bruta",
+        "display_name": "receita_bruta",
+        "base_type": "type/Decimal"
+      },
+      {
+        "name": "receita_mes_anterior",
+        "display_name": "receita_mes_anterior",
+        "base_type": "type/Decimal"
+      },
+      {
+        "name": "crescimento_receita",
+        "display_name": "crescimento_receita",
+        "base_type": "type/Decimal"
+      },
+      {
+        "name": "despesa_pessoal",
+        "display_name": "despesa_pessoal",
+        "base_type": "type/Decimal"
+      },
+      {
+        "name": "despesa_mes_anterior",
+        "display_name": "despesa_mes_anterior",
+        "base_type": "type/Decimal"
+      },
+      {
+        "name": "crescimento_folha",
+        "display_name": "crescimento_folha",
+        "base_type": "type/Decimal"
+      }
+    ]
+  }
+]
