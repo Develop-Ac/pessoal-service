@@ -139,6 +139,22 @@ Esquema: aplicar manualmente `sql/05_comissoes_ponto.sql` (cria
 `ComissaoPontoDia` e adiciona as colunas de exclusão em `ComissaoMovimento` e
 `ComissaoResultadoVendedor`).
 
+### Escada do mix 1 (vendedores e supervisor do atacado)
+
+Desde o mês comissional set/26 (plano de precificação do atacado; estendido ao
+supervisor em 28/10/2026), a participação do mix 1 na venda do mês define um
+multiplicador sobre o % **base** da faixa A/B/C/D do mix 1:
+`< 22% ×1,00 · ≥ 22% ×1,25 · ≥ 26% ×1,50 · ≥ 30% ×2,00`. Parâmetros em
+`dbo.ComissaoAtacadoEscadaMix1` (`sql/07_comissoes_escada_mix1.sql`, aplicar
+manual; também adiciona `mult_mix1` nos snapshots). Vendedor: base = linhas
+`atingiu_meta = 0` de `ComissaoAtacadoFaixaMix1`. Supervisor: base própria
+(A 1,00 / B 0,86 / C 0,71 / D 0,57 %), participação do canal inteiro; mix 2/3
+segue 0,55% fixo. Sem degrau vigente no fim do período (meses antigos, ou tabela
+ainda não aplicada) a engine usa a regra anterior: `meta_mix1` (30%) troca para a
+tabela "atingiu". A trava `venda_min_vs_media3m` é lida mas não aplicada (1,0)
+até aprovação da diretoria. Testes: `npm test` (`src/comissoes/escada-mix1.spec.ts`
+roda sobre o `dist/`, por isso o `pretest` faz o build).
+
 ### Abatimento
 
 Todo bloco aceita abatimento manual por período (`ComissaoParametroManual`), com

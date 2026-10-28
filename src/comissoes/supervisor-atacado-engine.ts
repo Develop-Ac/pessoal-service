@@ -11,9 +11,13 @@
        MENOS o que o canal vendeu nos dias de férias do supervisor (o canal
        continua vendendo sem ele; esses dias saem da base — e como o % é fixo,
        não há média projetada como no vendedor);
-     - atingiu_meta = (Σ mix 1 / base) >= 0,30;
-     - mix 2/3: alíquota FIXA de 0,55%;
-     - mix 1: % FIXO por faixa A/B/C/D, com uma tabela "abaixo" e outra "atingiu";
+     - mix 2/3: alíquota FIXA de 0,55% (sem escada);
+     - mix 1: % base por faixa A/B/C/D (1,00 / 0,86 / 0,71 / 0,57) x multiplicador
+       da MESMA escada de participação dos vendedores (dbo.ComissaoAtacadoEscadaMix1:
+       22% -> x1,25; 26% -> x1,50; 30% -> x2,00) — decisão da diretoria de 28/10/2026,
+       plano do prêmio do supervisor v5; a participação é a do canal inteiro;
+     - sem escada vigente (meses antigos): regra anterior — atingiu_meta =
+       (Σ mix 1 / base) >= 0,30 troca para a tabela "atingiu" (1,25/1,11/0,96/0,82);
      - comissão bruta = Σ (venda_célula * %).
 
    O abatimento (R$) segue a mesma mecânica do vendedor de atacado: reduz a base
@@ -26,7 +30,7 @@
    atacado-engine faz.
    ============================================================================= */
 
-import { CelulaAtacado } from './atacado-engine';
+import { CelulaAtacado, DegrauMix1, multiplicadorMix1 } from './atacado-engine';
 import { JanelaFerias } from './calculo-engine';
 
 /* ----------------------------- Tabela do card 420 -------------------------- */
@@ -34,10 +38,13 @@ import { JanelaFerias } from './calculo-engine';
 /** Alíquota fixa do mix 2/3 do supervisor (0,55%). */
 export const SUP_PCT_MIX23 = 0.0055;
 
-/** Participação mínima do mix 1 que muda a tabela do mix 1 (>= 30%). */
+/** Regra antiga (sem escada): participação mínima do mix 1 que muda a tabela (>= 30%). */
 export const SUP_META_MIX1 = 0.3;
 
-/** % do mix 1 por faixa, conforme a meta de participação foi atingida ou não. */
+/**
+ * % do mix 1 por faixa. `abaixo` é a base do supervisor (x multiplicador da
+ * escada); `atingiu` só vale na regra antiga, sem escada vigente.
+ */
 const SUP_MIX1: Record<'abaixo' | 'atingiu', Record<string, number>> = {
   abaixo: { A: 0.01, B: 0.0086, C: 0.0071, D: 0.0057 },
   atingiu: { A: 0.0125, B: 0.0111, C: 0.0096, D: 0.0082 },
@@ -45,17 +52,21 @@ const SUP_MIX1: Record<'abaixo' | 'atingiu', Record<string, number>> = {
 
 /**
  * % de comissão do supervisor para um item/célula (réplica do CASE do 420/447):
- * mix 2/3 -> fixo 0,55%; mix 1 -> tabela por faixa conforme atingiu a meta.
+ * mix 2/3 -> fixo 0,55%; mix 1 -> base da faixa x multiplicador da escada
+ * (quando informado) ou tabela "abaixo"/"atingiu" (regra antiga).
  */
 export function pctSupervisorAtacado(
   mix: number,
   faixa: string,
   atingiuMeta: boolean,
+  multiplicador?: number,
 ): number {
   if (mix === 2 || mix === 3) return SUP_PCT_MIX23;
   if (mix === 1) {
+    const f = (faixa ?? '').toUpperCase();
+    if (multiplicador !== undefined) return (SUP_MIX1.abaixo[f] ?? 0) * multiplicador;
     const tabela = atingiuMeta ? SUP_MIX1.atingiu : SUP_MIX1.abaixo;
-    return tabela[(faixa ?? '').toUpperCase()] ?? 0;
+    return tabela[f] ?? 0;
   }
   return 0;
 }
@@ -79,6 +90,8 @@ export interface ResumoSupervisorAtacado {
   /** Participação do mix 1 (total_mix1 / total_vendido). */
   pct_mix1: number;
   atingiu_meta: boolean;
+  /** Multiplicador do degrau da escada alcançado (1 sem escada ou abaixo do 1º degrau). */
+  mult_mix1: number;
   /** Alíquota fixa do mix 2/3 (informativa). */
   pct_mix23: number;
   /** Venda do canal nos dias de férias do supervisor (fora de total_vendido). */
@@ -132,13 +145,15 @@ const ordFaixa = (f: string) => ({ A: 1, B: 2, C: 3, D: 4 })[f] ?? 9;
  * Soma as células de TODO o canal (ignora o rep_codigo de origem), agrega por
  * (mix, faixa) e aplica a tabela do supervisor (card 420). `rep` é só o cadastro
  * do supervisor (código/nome) para identificar a quem a comissão pertence.
- * `parametro` traz o abatimento manual do período (opcional).
+ * `parametro` traz o abatimento manual do período (opcional). `escadaMix1` é a
+ * escada vigente no período (vazia = regra antiga em metaMix1).
  */
 export function calcularSupervisorAtacado(
   celulas: CelulaAtacado[],
   rep: { rep_codigo: number; nome: string | null },
   metaMix1: number = SUP_META_MIX1,
   parametro?: ParametroSupervisorAtacado,
+  escadaMix1: DegrauMix1[] = [],
 ): ResultadoSupervisorAtacado {
   // Agrega o canal inteiro por (mix, faixa). As células dos dias de férias do
   // supervisor entram com sinal trocado: o que o canal vendeu sem ele sai da
@@ -172,11 +187,18 @@ export function calcularSupervisorAtacado(
     .filter((d) => d.mix === 1)
     .reduce((s, d) => s + d.valor_vendido, 0);
   const pct_mix1 = total_vendido > 0 ? total_mix1 / total_vendido : 0;
-  const atingiu_meta = pct_mix1 >= metaMix1;
+  const comEscada = escadaMix1.length > 0;
+  const mult_mix1 = comEscada ? multiplicadorMix1(pct_mix1, escadaMix1) : 1;
+  const atingiu_meta = comEscada ? mult_mix1 > 1 : pct_mix1 >= metaMix1;
 
   let comissao_bruta = 0;
   for (const d of detalhe) {
-    d.pct_comissao = pctSupervisorAtacado(d.mix, d.faixa, atingiu_meta);
+    d.pct_comissao = pctSupervisorAtacado(
+      d.mix,
+      d.faixa,
+      atingiu_meta,
+      comEscada ? mult_mix1 : undefined,
+    );
     d.valor_comissao = d.valor_vendido * d.pct_comissao;
     comissao_bruta += d.valor_comissao;
   }
@@ -197,6 +219,7 @@ export function calcularSupervisorAtacado(
       total_mix1,
       pct_mix1,
       atingiu_meta,
+      mult_mix1,
       pct_mix23: SUP_PCT_MIX23,
       excluido_ferias,
       dias_ferias: ferias?.dias ?? 0,

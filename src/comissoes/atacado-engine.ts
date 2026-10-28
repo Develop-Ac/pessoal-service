@@ -7,12 +7,19 @@
    Por vendedor, sobre o período comissional (26 -> 25):
      - células = Σ liquido_produto por (mix, faixa) lidas de vw_analise_vendas;
      - total_vendido = Σ todas as células; total_mix1 = Σ células do mix 1;
-     - atingiu_meta = (total_mix1 / total_vendido) >= meta_mix1 (ex.: 30%);
+     - participação do mix 1 = total_mix1 / total_vendido;
+     - escada do mix 1 (plano do atacado de set/26, dbo.ComissaoAtacadoEscadaMix1):
+       o maior degrau cuja participação mínima foi alcançada dá o multiplicador
+       (22% -> x1,25; 26% -> x1,50; 30% -> x2,00; abaixo -> x1,00) aplicado ao
+       % base da faixa A-D; atingiu_meta = alcançou algum degrau;
+     - sem escada vigente no período (meses antigos): regra anterior, binária —
+       atingiu_meta = participação >= meta_mix1 (30%) troca a tabela do mix 1;
      - abatimento (R$) reduz o total: base_real = total_vendido - abatimento;
      - média de férias (só mix 2/3) projeta a venda dos dias parados sobre o
        total geral: total_faixa = base_real + media_ferias (escolhe a faixa do
        mix 2/3); a comissão é paga sobre a venda real;
-     - % por célula: mix 1 -> fixo por faixa (dobra se atingiu_meta); mix 2/3 ->
+     - % por célula: mix 1 -> % base da faixa x multiplicador (ou a tabela
+       "atingiu" na regra antiga); mix 2/3 ->
        progressivo sobre total_faixa;
      - comissão bruta = Σ (venda_célula * %); o abatimento é proporcional:
        valor_comissao = comissao_bruta * (base_real / total_vendido).
@@ -44,6 +51,14 @@ export interface FaixaMix1 {
   percentual: number;
 }
 
+/** Degrau da escada de participação do mix 1 (dbo.ComissaoAtacadoEscadaMix1). */
+export interface DegrauMix1 {
+  /** Participação mínima do mix 1 na venda do mês (0.22 = 22%). */
+  part_min: number;
+  /** Multiplicador sobre o % base da faixa (1.25 / 1.5 / 2). */
+  multiplicador: number;
+}
+
 /** Representante (só nome/inativo importam aqui; o filtro de atacado é externo). */
 export interface RepresentanteAtacado {
   rep_codigo: number;
@@ -64,8 +79,14 @@ export interface ParametroAtacado {
 export interface ConfiguracaoAtacado {
   faixasMix23: FaixaMix23[];
   faixasMix1: FaixaMix1[];
-  /** Participação do mix 1 que dobra o % (ex.: 0.30). */
+  /** Regra antiga: participação do mix 1 que troca a tabela (ex.: 0.30). Só vale sem escada. */
   metaMix1: number;
+  /**
+   * Escada vigente no período (qualquer ordem). Vazia = regra antiga (binária
+   * em metaMix1). A trava venda_min_vs_media3m da tabela não é aplicada aqui
+   * (fica em 1,0 até a diretoria aprovar).
+   */
+  escadaMix1: DegrauMix1[];
   representantes: Map<number, RepresentanteAtacado>;
   parametros: Map<number, ParametroAtacado>;
   /** Dias corridos do período (26 -> 25). */
@@ -93,6 +114,8 @@ export interface ResultadoAtacado {
   /** Participação do mix 1 (total_mix1 / total_vendido). */
   pct_mix1: number;
   atingiu_meta: boolean;
+  /** Multiplicador do degrau alcançado (1 sem escada ou abaixo do 1º degrau). */
+  mult_mix1: number;
   abatimento: number;
   abatimento_motivo: string | null;
   base_real: number;
@@ -133,17 +156,40 @@ export function percentualMix23(total: number, faixas: FaixaMix23[]): number {
   return ordenadas.length ? ordenadas[ordenadas.length - 1].percentual : 0;
 }
 
-/** % fixo do mix 1 por (faixa, atingiu_meta). Sem match => 0. */
+/**
+ * Multiplicador do mix 1 pela escada: o do maior degrau com part_min <= participação.
+ * Escada vazia ou participação abaixo do primeiro degrau => 1.
+ */
+export function multiplicadorMix1(pctMix1: number, escada: DegrauMix1[]): number {
+  let mult = 1;
+  let maior = -Infinity;
+  for (const d of escada) {
+    if (pctMix1 >= d.part_min && d.part_min > maior) {
+      maior = d.part_min;
+      mult = d.multiplicador;
+    }
+  }
+  return mult;
+}
+
+/**
+ * % do mix 1 por faixa. Com escada (multiplicador informado): % base da faixa
+ * (linha atingiu_meta = 0) x multiplicador. Sem escada: tabela "abaixo"/"atingiu"
+ * conforme atingiuMeta (regra antiga). Sem match => 0.
+ */
 export function percentualMix1(
   faixa: string,
   atingiuMeta: boolean,
   faixas: FaixaMix1[],
+  multiplicador?: number,
 ): number {
   const alvo = (faixa ?? '').toUpperCase();
+  const comEscada = multiplicador !== undefined;
+  const linhaAtingiu = comEscada ? false : atingiuMeta;
   const f = faixas.find(
-    (x) => (x.faixa ?? '').toUpperCase() === alvo && !!x.atingiu_meta === atingiuMeta,
+    (x) => (x.faixa ?? '').toUpperCase() === alvo && !!x.atingiu_meta === linhaAtingiu,
   );
-  return f ? f.percentual : 0;
+  return f ? f.percentual * (comEscada ? multiplicador : 1) : 0;
 }
 
 /* ------------------------------ Orquestração ------------------------------- */
@@ -172,7 +218,9 @@ export function calcularAtacado(
       .filter((c) => num(c.mix) === 1)
       .reduce((s, c) => s + num(c.valor_vendido), 0);
     const pct_mix1 = total_vendido > 0 ? total_mix1 / total_vendido : 0;
-    const atingiu_meta = pct_mix1 >= cfg.metaMix1;
+    const comEscada = cfg.escadaMix1.length > 0;
+    const mult_mix1 = comEscada ? multiplicadorMix1(pct_mix1, cfg.escadaMix1) : 1;
+    const atingiu_meta = comEscada ? mult_mix1 > 1 : pct_mix1 >= cfg.metaMix1;
 
     const p = cfg.parametros.get(cod);
     const abatimento = num(p?.abatimento);
@@ -197,7 +245,7 @@ export function calcularAtacado(
       const mix = num(c.mix);
       const pct =
         mix === 1
-          ? percentualMix1(c.faixa, atingiu_meta, cfg.faixasMix1)
+          ? percentualMix1(c.faixa, atingiu_meta, cfg.faixasMix1, comEscada ? mult_mix1 : undefined)
           : mix === 2 || mix === 3
             ? pct_mix23
             : 0;
@@ -222,6 +270,7 @@ export function calcularAtacado(
       total_mix1,
       pct_mix1,
       atingiu_meta,
+      mult_mix1,
       abatimento,
       abatimento_motivo: abatimento
         ? ((p?.abatimento_motivo ?? '').trim() || null)

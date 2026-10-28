@@ -11,6 +11,7 @@
     "start": "node dist/main.js",
     "db:pull": "prisma db pull --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "pretest": "nest build",
     "test": "node --experimental-strip-types --test src/**/*.spec.ts"
   },
   "keywords": [],

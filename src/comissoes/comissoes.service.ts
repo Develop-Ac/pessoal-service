@@ -26,6 +26,7 @@ import {
 import {
   CelulaAtacado,
   ConfiguracaoAtacado,
+  DegrauMix1,
   FaixaMix1,
   FaixaMix23,
   ParametroAtacado,
@@ -195,10 +196,7 @@ export class ComissoesService {
 
       set('Calculando comissões', 70);
       const resultado = calcular(vendas, servicos, os, cfg);
-      const cfgAtacado = await this.carregarConfiguracaoAtacado(
-        periodo.id,
-        periodo.dias_corridos,
-      );
+      const cfgAtacado = await this.carregarConfiguracaoAtacado(periodo);
       const resultadoAtacado = calcularAtacado(atacadoCelulas, cfgAtacado);
       const resultadoSupervisor = await this.calcularSupervisorAtacado(
         periodo,
@@ -315,7 +313,7 @@ export class ComissoesService {
 
     const cfg = await this.carregarConfiguracao(periodo);
     const resultado = calcular(mov.vendas, mov.servicos, mov.os, cfg);
-    const cfgAtacado = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
+    const cfgAtacado = await this.carregarConfiguracaoAtacado(periodo);
     const resultadoAtacado = calcularAtacado(mov.atacado, cfgAtacado);
     const resultadoSupervisor = await this.calcularSupervisorAtacado(
       periodo,
@@ -935,10 +933,17 @@ export class ComissoesService {
   }
 
   /** Faixas (mix23/mix1), meta, cadastro e parâmetros do atacado. */
-  private async carregarConfiguracaoAtacado(
-    periodoId: number,
-    diasCorridos: number,
-  ): Promise<ConfiguracaoAtacado> {
+  private async carregarConfiguracaoAtacado(periodo: {
+    id: number;
+    ano: number;
+    mes: number;
+    dias_corridos: number;
+  }): Promise<ConfiguracaoAtacado> {
+    const periodoId = Number(periodo.id);
+    const diasCorridos = Number(periodo.dias_corridos);
+    const escadaMix1 = await this.lerEscadaMix1(
+      calcularDatasPeriodo(periodo.ano, periodo.mes).dataFimYmd,
+    );
     const repsRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT rep_codigo, nome, inativo
       FROM dbo.ComissaoRepresentante WHERE local_venda = 'ATACADO'`);
@@ -988,7 +993,43 @@ export class ComissoesService {
       });
     }
 
-    return { faixasMix23, faixasMix1, metaMix1, representantes, parametros, diasCorridos };
+    return {
+      faixasMix23,
+      faixasMix1,
+      metaMix1,
+      escadaMix1,
+      representantes,
+      parametros,
+      diasCorridos,
+    };
+  }
+
+  /**
+   * Escada de participação do mix 1 vigente no fim do período (plano do atacado
+   * de set/26; parâmetros em dbo.ComissaoAtacadoEscadaMix1, SQL manual 07).
+   * A mesma escada vale para os vendedores e para o supervisor do atacado.
+   * Vazia quando a tabela ainda não existe ou nenhum degrau vige na data: o
+   * cálculo cai na regra anterior (meta_mix1 binária), o que preserva os meses
+   * antigos. A coluna venda_min_vs_media3m (trava anti-manipulação) não é
+   * aplicada: fica em 1,0 até a diretoria aprovar.
+   */
+  private async lerEscadaMix1(dataFimYmd?: string): Promise<DegrauMix1[]> {
+    try {
+      const rows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT part_min, multiplicador
+        FROM dbo.ComissaoAtacadoEscadaMix1
+        WHERE ativo = 1 AND vigente_de <= ${dataFimYmd ?? '9999-12-31'}
+        ORDER BY part_min`);
+      return rows.map((r) => ({
+        part_min: Number(r.part_min),
+        multiplicador: Number(r.multiplicador),
+      }));
+    } catch (e) {
+      this.logger.warn(
+        `Escada do mix 1 indisponível (dbo.ComissaoAtacadoEscadaMix1 não aplicada?); usando a regra antiga: ${(e as Error).message}`,
+      );
+      return [];
+    }
   }
 
   /** Grava o snapshot do atacado (apaga e regrava o período). */
@@ -1007,11 +1048,11 @@ export class ComissoesService {
       await this.prisma.$executeRaw(Prisma.sql`
         INSERT INTO dbo.ComissaoResultadoAtacado
           (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1, atingiu_meta,
-           abatimento, abatimento_motivo, base_real, dias_ferias, media_ferias, total_faixa,
+           mult_mix1, abatimento, abatimento_motivo, base_real, dias_ferias, media_ferias, total_faixa,
            pct_mix23, comissao_bruta, fator_abatimento, valor_comissao)
         VALUES
           (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
-           ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
+           ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta}, ${round6(v.mult_mix1)},
            ${round2(v.abatimento)}, ${v.abatimento_motivo}, ${round2(v.base_real)}, ${v.dias_ferias},
            ${round2(v.media_ferias)}, ${round2(v.total_faixa)}, ${round6(v.pct_mix23)},
            ${round2(v.comissao_bruta)}, ${round6(v.fator_abatimento)}, ${round2(v.valor_comissao)})`);
@@ -1062,14 +1103,16 @@ export class ComissoesService {
     let itens: any[] = [];
     if (resumo) {
       const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
-      const cfg = await this.carregarConfiguracaoAtacado(periodoId, periodo.dias_corridos);
+      const cfg = await this.carregarConfiguracaoAtacado(periodo);
       const pctMix23 = Number(resumo.pct_mix23);
       const atingiuMeta = !!resumo.atingiu_meta;
+      // Multiplicador gravado no cálculo (escada vigente); sem escada, regra antiga.
+      const multMix1 = cfg.escadaMix1.length ? Number(resumo.mult_mix1 ?? 1) : undefined;
       const raw = await this.atacado.lerItensRep(dataIniYmd, dataFimYmd, repCodigo);
       itens = raw.map((it) => {
         const pct =
           it.mix === 1
-            ? percentualMix1(it.faixa, atingiuMeta, cfg.faixasMix1)
+            ? percentualMix1(it.faixa, atingiuMeta, cfg.faixasMix1, multMix1)
             : it.mix === 2 || it.mix === 3
               ? pctMix23
               : 0;
@@ -1125,13 +1168,17 @@ export class ComissoesService {
       Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
     );
     const metaMix1 = metaRows.length ? Number(metaRows[0].meta_mix1) : undefined;
+    const escada = await this.lerEscadaMix1(
+      calcularDatasPeriodo(periodo.ano, periodo.mes).dataFimYmd,
+    );
     const paramRows = await this.prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT abatimento, abatimento_motivo, tem_ferias,
              CONVERT(varchar(10), ferias_inicio, 23) AS ferias_inicio,
              CONVERT(varchar(10), ferias_fim, 23)    AS ferias_fim
       FROM dbo.ComissaoParametroManual
       WHERE periodo_id = ${periodoId} AND rep_codigo = ${rep.rep_codigo}`);
-    if (!paramRows.length) return calcularSupervisorAtacado(celulas, rep, metaMix1);
+    if (!paramRows.length)
+      return calcularSupervisorAtacado(celulas, rep, metaMix1, undefined, escada);
 
     const p = paramRows[0];
     // Férias do supervisor: relê SÓ a janela no BI (mesma consulta das células)
@@ -1150,12 +1197,18 @@ export class ComissoesService {
     const celulasFerias = ferias
       ? await this.atacado.lerCelulas(ferias.inicio, ferias.fim, repsAtacado)
       : [];
-    return calcularSupervisorAtacado(celulas, rep, metaMix1, {
-      abatimento: Number(p.abatimento),
-      abatimento_motivo: p.abatimento_motivo ?? null,
-      ferias,
-      celulasFerias,
-    });
+    return calcularSupervisorAtacado(
+      celulas,
+      rep,
+      metaMix1,
+      {
+        abatimento: Number(p.abatimento),
+        abatimento_motivo: p.abatimento_motivo ?? null,
+        ferias,
+        celulasFerias,
+      },
+      escada,
+    );
   }
 
   /** Grava o snapshot do supervisor do atacado (apaga e regrava o período). */
@@ -1175,12 +1228,12 @@ export class ComissoesService {
     await this.prisma.$executeRaw(Prisma.sql`
       INSERT INTO dbo.ComissaoResultadoSupervisorAtacado
         (periodo_id, rep_codigo, nome, total_vendido, total_mix1, pct_mix1,
-         atingiu_meta, pct_mix23, excluido_ferias, dias_ferias, ferias_inicio, ferias_fim,
+         atingiu_meta, mult_mix1, pct_mix23, excluido_ferias, dias_ferias, ferias_inicio, ferias_fim,
          abatimento, abatimento_motivo, base_real,
          comissao_bruta, fator_abatimento, comissao_total)
       VALUES
         (${periodoId}, ${v.rep_codigo}, ${v.nome}, ${round2(v.total_vendido)},
-         ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta},
+         ${round2(v.total_mix1)}, ${round6(v.pct_mix1)}, ${v.atingiu_meta}, ${round6(v.mult_mix1)},
          ${round6(v.pct_mix23)}, ${round2(v.excluido_ferias)}, ${v.dias_ferias},
          ${vdate(v.ferias_inicio)}, ${vdate(v.ferias_fim)},
          ${round2(v.abatimento)}, ${v.abatimento_motivo},
@@ -1240,6 +1293,7 @@ export class ComissoesService {
       total_mix1: Number(s.total_mix1),
       pct_mix1: Number(s.pct_mix1),
       atingiu_meta: !!s.atingiu_meta,
+      mult_mix1: Number(s.mult_mix1 ?? 1),
       abatimento: Number(s.abatimento ?? 0),
       abatimento_motivo: s.abatimento_motivo ?? null,
       base_real: Number(s.base_real ?? s.total_vendido),
@@ -1265,12 +1319,17 @@ export class ComissoesService {
     const { dataIniYmd, dataFimYmd } = calcularDatasPeriodo(periodo.ano, periodo.mes);
     const repsAtacado = await this.listarRepsAtacado();
     const atingiuMeta = !!s.atingiu_meta;
+    // Multiplicador gravado no cálculo (escada vigente); sem escada, regra antiga.
+    const escada = await this.lerEscadaMix1(dataFimYmd);
+    const multMix1 = escada.length ? Number(s.mult_mix1 ?? 1) : undefined;
     const raw = await this.atacado.lerItensCanal(dataIniYmd, dataFimYmd, repsAtacado);
     const itens = raw.map((it) => {
       // Item emitido nos dias de férias do supervisor: fica na relação (é venda
       // do canal), mas não comissiona — sai carimbado para o demonstrativo.
       const excluido_ferias = dentroDaJanela(it.dt_emissao, ferias);
-      const pct = excluido_ferias ? 0 : pctSupervisorAtacado(it.mix, it.faixa, atingiuMeta);
+      const pct = excluido_ferias
+        ? 0
+        : pctSupervisorAtacado(it.mix, it.faixa, atingiuMeta, multMix1);
       return {
         dt_emissao: it.dt_emissao,
         cli_codigo: it.cli_codigo,
@@ -1301,7 +1360,13 @@ export class ComissoesService {
     const cfg = await this.prisma.$queryRaw<any[]>(
       Prisma.sql`SELECT meta_mix1 FROM dbo.ComissaoAtacadoConfig WHERE id = 1`,
     );
-    return { mix23, mix1, meta_mix1: cfg.length ? Number(cfg[0].meta_mix1) : 0.3 };
+    return {
+      mix23,
+      mix1,
+      meta_mix1: cfg.length ? Number(cfg[0].meta_mix1) : 0.3,
+      // Escada vigente hoje (só leitura; parâmetros via SQL manual 07).
+      escada_mix1: await this.lerEscadaMix1(),
+    };
   }
 
   /** Edita em lote as tabelas de alíquota do atacado (mix23/mix1/meta). */
