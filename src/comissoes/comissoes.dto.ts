@@ -50,12 +50,12 @@ export class AtualizarParametroDto {
   @MaxLength(200)
   abatimento_motivo?: string;
 
-  @ApiPropertyOptional({ description: 'Vendedor esteve de férias no período' })
+  @ApiPropertyOptional({ description: 'Esteve de férias no período (vendedores e supervisores)' })
   @IsOptional()
   @IsBoolean()
   tem_ferias?: boolean;
 
-  @ApiPropertyOptional({ example: 10, description: 'Dias de férias no período' })
+  @ApiPropertyOptional({ example: 10, description: 'Legado: dias digitados. Com datas (ferias_inicio/fim) o serviço conta os dias dentro do mês comissional.' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -66,7 +66,7 @@ export class AtualizarParametroDto {
   @ApiPropertyOptional({
     example: '2026-08-01',
     description:
-      'Início das férias (AAAA-MM-DD) — supervisores: o movimento dos dias da janela sai da base',
+      'Início das férias (AAAA-MM-DD). Vale em todo mês comissional que a janela cruzar: vendedores — média pelos dias dentro do mês; supervisores — o movimento dos dias da janela sai da base',
   })
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'ferias_inicio deve ser AAAA-MM-DD' })

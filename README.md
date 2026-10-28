@@ -155,6 +155,21 @@ tabela "atingiu". A trava `venda_min_vs_media3m` é lida mas não aplicada (1,0)
 até aprovação da diretoria. Testes: `npm test` (`src/comissoes/escada-mix1.spec.ts`
 roda sobre o `dist/`, por isso o `pretest` faz o build).
 
+### Férias (todos os papéis)
+
+Férias são uma **janela de datas por representante** em `dbo.ComissaoFerias`
+(`sql/08_comissoes_ferias.sql`), independente do período de comissões. Ao calcular
+um mês comissional (26 a 25), o serviço lê as janelas que o cruzam e recorta aos
+dias dele: vendedor (varejo e atacado) recebe `dias_ferias` para a **média de
+férias**; supervisor recebe a janela recortada e o movimento desses dias sai da
+base. Uma janela que atravessa a virada do mês vale nos dois meses sem redigitar.
+Na tela, "Férias?" + Início + Fim em todos os blocos; a coluna "Dias no mês" é só
+exibição. Salvar os parâmetros de um período troca as férias do rep que cruzam
+aquele período pela janela informada (desmarcar apaga). Sem a tabela aplicada, o
+serviço avisa no log e usa as férias da linha do período (`ComissaoParametroManual`),
+que continua recebendo o que a tela manda; `dias_ferias` digitado só vale como
+legado em período antigo sem janela na tabela.
+
 ### Abatimento
 
 Todo bloco aceita abatimento manual por período (`ComissaoParametroManual`), com
